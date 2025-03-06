@@ -815,7 +815,7 @@ export default function TravelStampGenerator() {
             ) : (
               <div className={getPreviewClasses()} ref={previewContainerRef}>
                 <div
-                  className={`border-8 rounded-lg overflow-hidden ${getTemplateClasses()} ${getFormatClasses()} relative before:absolute before:inset-0 before:bg-[url('/textures/paper-texture.jpg')] before:bg-cover before:opacity-20 before:mix-blend-multiply shadow-xl`}
+                  className={`border-4 rounded-lg overflow-hidden ${getTemplateClasses()} ${getFormatClasses()} relative before:absolute before:inset-0 before:bg-[url('/textures/paper-texture.jpg')] before:bg-cover before:opacity-20 before:mix-blend-multiply shadow-xl`}
                 >
                   {/* Esquinas decorativas */}
                   <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-amber-800/20 rounded-tl-lg" />
@@ -825,10 +825,12 @@ export default function TravelStampGenerator() {
 
                   {/* Contenido */}
                   <div className="relative z-10">
-                    <div className="p-3 text-center">
-                      <h3 className="font-serif font-bold text-xl tracking-wide text-amber-900">{tripName}</h3>
+                    <div className="p-3 text-center space-y-1.5">
+                      <h3 className="font-serif font-bold text-lg tracking-wide text-amber-900">{tripName}</h3>
                       {tripDate && (
-                        <p className="text-xs text-amber-700 mt-0.5 font-medium tracking-wider">{tripDate}</p>
+                        <p className="text-[11px] text-amber-700 mt-0.5 font-medium tracking-wider">
+                          {tripDate}
+                        </p>
                       )}
                     </div>
 
@@ -840,15 +842,20 @@ export default function TravelStampGenerator() {
                           <strong>{calculateTotalDistance()} km</strong> recorridos
                         </p>
                       </div>
+                      </div>
 
-                      <p className="text-xs text-amber-800">{destinations.map((d) => d.name).join(" • ")}</p>
+                        km</strong> recorridos
+                        </p>
+                      </div>
 
-                      {tripComment && (
-                        <div className="mt-2 px-4">
-                          <div className="relative">
-                            <div className="absolute -left-3 top-0 text-amber-800/30 text-base">"</div>
-                            <p className="italic text-xs text-amber-800 leading-relaxed px-4">{tripComment}</p>
-                            <div className="absolute -right-3 bottom-0 text-amber-800/30 text-base">"</div>
+                                            {tripComment && tripComment.length > 0 && (
+                        <div className="mt-2">
+                          <div className="relative px-6">
+                            <span className="absolute left-0 top-0 text-amber-800/30 text-lg">"</span>
+                            <p className="italic text-[11px] text-amber-800 leading-relaxed">
+                              {tripComment}
+                            </p>
+                            <span className="absolute right-0 bottom-0 text-amber-800/30 text-lg">"</span>
                           </div>
                         </div>
                       )}
@@ -856,44 +863,47 @@ export default function TravelStampGenerator() {
                   </div>
                 </div>
               </div>
-            )}
-            <div className="mt-6 space-y-3">
-              <Button
-                className="w-full"
-                variant="outline"
-                disabled={destinations.length < 2 || isDownloading}
-                onClick={downloadFreeStamp}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {isDownloading ? "Descargando..." : "Descarga gratuita con marca de agua"}
-              </Button>
-              <Button
-                className="w-full bg-gradient-to-r from-amber-500 to-amber-700 hover:from-amber-600 hover:to-amber-800"
-                disabled={destinations.length < 2}
-                onClick={openLemonSqueezyCheckout}
-              >
-                <Crown className="h-4 w-4 mr-2" />
-                Descarga premium ($5)
-              </Button>
-              <div className="mt-2 text-center">
-                <button
-                  onClick={refreshPreview}
-                  className="text-xs text-amber-600 hover:text-amber-700 flex items-center justify-center mx-auto"
-                >
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Actualizar vista previa
-                </button>
-              </div>
-              <p className="text-xs text-center text-muted-foreground mt-2">
-                La versión premium incluye alta resolución y sin marca de agua
-              </p>
-            </div>
-          </CardContent>
+            )
+}
+;<div className="mt-6 space-y-3">
+  <Button
+    className="w-full"
+    variant="outline"
+    disabled={destinations.length < 2 || isDownloading}
+    onClick={downloadFreeStamp}
+  >
+    <Download className="h-4 w-4 mr-2" />
+    {isDownloading ? "Descargando..." : "Descarga gratuita con marca de agua"}
+  </Button>
+  <Button
+    className="w-full bg-gradient-to-r from-amber-500 to-amber-700 hover:from-amber-600 hover:to-amber-800"
+    disabled={destinations.length < 2}
+    onClick={openLemonSqueezyCheckout}
+  >
+    <Crown className="h-4 w-4 mr-2" />
+    Descarga premium ($5)
+  </Button>
+  <div className="mt-2 text-center">
+    <button
+      onClick={refreshPreview}
+      className="text-xs text-amber-600 hover:text-amber-700 flex items-center justify-center mx-auto"
+    >
+      <RefreshCw className="h-3 w-3 mr-1" />
+      Actualizar vista previa
+    </button>
+  </div>
+  <p className="text-xs text-center text-muted-foreground mt-2">
+    La versión premium incluye alta resolución y sin marca de agua
+  </p>
+</div>
+</CardContent>
         </Card>
       </div>
     </div>
   )
 }
+
+
 
 
 
