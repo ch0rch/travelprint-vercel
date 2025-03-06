@@ -121,7 +121,23 @@ export default function TravelStampGenerator() {
       container: previewMapRef.current,
       style: `mapbox://styles/mapbox/${mapStyle}`,
       interactive: false,
-      preserveDrawingBuffer: true, // Añade esta línea
+      preserveDrawingBuffer: true,
+      antialias: true, // Añadir antialiasing
+      crossSourceCollisions: false, // Mejorar el rendimiento
+    })
+
+    // Manejar el evento de carga
+    previewMapRef2.current.on("load", () => {
+      updatePreviewRoute()
+
+      // Ajustar la vista para mostrar todos los destinos
+      if (destinations.length > 0) {
+        const bounds = new mapboxgl.LngLatBounds()
+        destinations.forEach((dest) => {
+          bounds.extend(dest.coordinates as mapboxgl.LngLatLike)
+        })
+        previewMapRef2.current?.fitBounds(bounds, { padding: 30 })
+      }
     })
 
     return () => {
@@ -380,32 +396,46 @@ export default function TravelStampGenerator() {
     setIsDownloading(true)
 
     try {
-      if (!previewContainerRef.current) return
+      if (!previewContainerRef.current || !previewMapRef2.current) return
 
-      // Esperar a que el mapa termine de renderizarse completamente
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Asegurarse de que el mapa esté completamente cargado
+      if (!previewMapRef2.current.loaded()) {
+        await new Promise((resolve) => {
+          previewMapRef2.current?.once("load", resolve)
+        })
+      }
 
-      // Capturar la vista previa como imagen
+      // Esperar a que los tiles se carguen
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+      // Configuración de html2canvas
       const canvas = await html2canvas(previewContainerRef.current, {
-        scale: 2, // Mayor calidad
-        useCORS: true, // Permitir imágenes de otros dominios
-        logging: false,
-        backgroundColor: null,
+        scale: 2,
+        useCORS: true,
         allowTaint: true,
-        foreignObjectRendering: true,
+        backgroundColor: "#ffffff", // Fondo blanco en lugar de transparente
+        logging: true, // Activar logs para debug
+        onclone: (document, element) => {
+          // Asegurarse de que los estilos se apliquen correctamente en el clon
+          const mapContainer = element.querySelector(`[class*="${getMapClasses()}"]`)
+          if (mapContainer) {
+            mapContainer.style.height = `${mapContainer.offsetHeight}px`
+            mapContainer.style.width = `${mapContainer.offsetWidth}px`
+          }
+        },
       })
 
       // Añadir marca de agua
       const ctx = canvas.getContext("2d")
       if (ctx) {
-        ctx.font = "14px Arial"
+        ctx.font = "bold 16px Arial"
         ctx.fillStyle = "rgba(0, 0, 0, 0.5)"
         ctx.textAlign = "center"
         ctx.fillText("Creado gratis con TravelPrint.me", canvas.width / 2, canvas.height - 20)
       }
 
       // Convertir a imagen y descargar
-      const image = canvas.toDataURL("image/png")
+      const image = canvas.toDataURL("image/png", 1.0)
       const link = document.createElement("a")
       link.href = image
       link.download = `${tripName.replace(/\s+/g, "-").toLowerCase()}-estampita.png`
@@ -454,23 +484,36 @@ export default function TravelStampGenerator() {
 
   const generatePremiumStamp = async () => {
     try {
-      if (!previewContainerRef.current) return
+      if (!previewContainerRef.current || !previewMapRef2.current) return
 
-      // Esperar a que el mapa termine de renderizarse completamente
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Asegurarse de que el mapa esté completamente cargado
+      if (!previewMapRef2.current.loaded()) {
+        await new Promise((resolve) => {
+          previewMapRef2.current?.once("load", resolve)
+        })
+      }
 
-      // Capturar la vista previa como imagen en alta calidad
+      // Esperar a que los tiles se carguen
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+      // Configuración de html2canvas
       const canvas = await html2canvas(previewContainerRef.current, {
-        scale: 4, // Calidad superior para versión premium
+        scale: 4,
         useCORS: true,
-        logging: false,
-        backgroundColor: null,
         allowTaint: true,
-        foreignObjectRendering: true,
+        backgroundColor: "#ffffff",
+        logging: true,
+        onclone: (document, element) => {
+          const mapContainer = element.querySelector(`[class*="${getMapClasses()}"]`)
+          if (mapContainer) {
+            mapContainer.style.height = `${mapContainer.offsetHeight}px`
+            mapContainer.style.width = `${mapContainer.offsetWidth}px`
+          }
+        },
       })
 
       // Convertir a imagen y descargar
-      const image = canvas.toDataURL("image/png")
+      const image = canvas.toDataURL("image/png", 1.0)
       const link = document.createElement("a")
       link.href = image
       link.download = `${tripName.replace(/\s+/g, "-").toLowerCase()}-premium.png`
@@ -764,4 +807,6 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
