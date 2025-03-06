@@ -57,7 +57,7 @@ const stampFormats = [
     name: "Cuadrado (1:1)",
     icon: Square,
     containerClass: "w-full aspect-square",
-    mapClass: "w-full h-[220px]",
+    mapClass: "w-full h-[260px]",
     previewClass: "max-w-[350px] mx-auto",
   },
   {
@@ -65,7 +65,7 @@ const stampFormats = [
     name: "Vertical (4:5)",
     icon: ImageIcon,
     containerClass: "w-full aspect-[4/5]",
-    mapClass: "w-full h-[300px]",
+    mapClass: "w-full h-[340px]",
     previewClass: "max-w-[280px] mx-auto",
   },
   {
@@ -73,7 +73,7 @@ const stampFormats = [
     name: "Historia (9:16)",
     icon: Smartphone,
     containerClass: "w-full aspect-[9/16]",
-    mapClass: "w-full h-[350px]",
+    mapClass: "w-full h-[400px]",
     previewClass: "max-w-[220px] mx-auto",
   },
   {
@@ -81,7 +81,7 @@ const stampFormats = [
     name: "Horizontal (16:9)",
     icon: MonitorSmartphone,
     containerClass: "w-full aspect-[16/9]",
-    mapClass: "w-full h-[200px]",
+    mapClass: "w-full h-[240px]",
     previewClass: "max-w-[350px] mx-auto",
   },
 ]
@@ -895,8 +895,6 @@ export default function TravelStampGenerator() {
                         </p>
                       </div>
 
-                      <p className="text-[9px] text-amber-800">00">{destinations.map((d) => d.name).join(" • ")}</p>
-
                       {tripComment && (
                         <div className="mt-1 px-3">
                           <div className="relative">
@@ -948,6 +946,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
