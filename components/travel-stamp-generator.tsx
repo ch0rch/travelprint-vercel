@@ -8,7 +8,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { MapPin, Plus, Download, Trash2, Smartphone, Square, ImageIcon, MonitorSmartphone, Crown, RefreshCw, Lock, Sparkles, Palette } from 'lucide-react'
+import {
+  MapPin,
+  Plus,
+  Download,
+  Trash2,
+  Smartphone,
+  Square,
+  ImageIcon,
+  MonitorSmartphone,
+  Crown,
+  RefreshCw,
+  Lock,
+  Sparkles,
+  Palette,
+} from "lucide-react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import html2canvas from "html2canvas"
@@ -91,6 +105,7 @@ const stampFormats = [
   },
 ]
 
+// Valores predeterminados para la ruta
 const ROUTE_COLOR = "#E05D37"
 const ROUTE_WIDTH = 4
 
@@ -104,17 +119,16 @@ export default function TravelStampGenerator() {
   const [tripComment, setTripComment] = useState("")
   const [isDownloading, setIsDownloading] = useState(false)
   const [tempMarker, setTempMarker] = useState<mapboxgl.Marker | null>(null)
-  const [isPremium, setIsPremium] = useState<boolean>(false) // Inicializar como false por defecto
+  const [isPremium, setIsPremium] = useState<boolean>(false)
   const [showPremiumModal, setShowPremiumModal] = useState(false)
   const [expiryDate, setExpiryDate] = useState<Date | null>(null)
   const [remainingDays, setRemainingDays] = useState<number | null>(null)
   const [showExpiryReminder, setShowExpiryReminder] = useState(false)
-  const [showActivateModal, setShowActivateModal] = useState(false) // Nuevo estado para el modal de activación
-  const [backgroundColor, setBackgroundColor] = useState(pastelColors[0].value) // Color de fondo predeterminado
+  const [showActivateModal, setShowActivateModal] = useState(false)
+  const [backgroundColor, setBackgroundColor] = useState(pastelColors[0].value)
   const [borderColor, setBorderColor] = useState(pastelColors[0].borderColor)
   const [textColor, setTextColor] = useState(pastelColors[0].textColor)
-  const [stampFormat, setStampFormat] = useState("square"); // Added state for stamp format
-
+  const [stampFormat, setStampFormat] = useState("square")
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const previewMapRef = useRef<HTMLDivElement>(null)
@@ -158,8 +172,8 @@ export default function TravelStampGenerator() {
       style: `mapbox://styles/mapbox/${mapStyle}`,
       interactive: false,
       preserveDrawingBuffer: true,
-      antialias: true, // Añadir antialiasing
-      crossSourceCollisions: false, // Mejorar el rendimiento
+      antialias: true,
+      crossSourceCollisions: false,
     })
 
     // Manejar el evento de carga
@@ -260,7 +274,7 @@ export default function TravelStampGenerator() {
     })
   }, [destinations])
 
-  // Primero, añadimos el efecto de actualización del mapa cuando cambia el formato
+  // Actualizar el mapa cuando cambia el formato
   useEffect(() => {
     if (!previewMapRef2.current || destinations.length < 2) return
 
@@ -308,6 +322,11 @@ export default function TravelStampGenerator() {
     }
   }, [isPremium, remainingDays])
 
+  // Verificar si hay parámetros de compra en la URL
+  useEffect(() => {
+    checkPurchaseFromURL()
+  }, [])
+
   // Verificar si un estilo de mapa es premium
   const isMapStylePremium = (styleId: string) => {
     return mapStyles.find((style) => style.id === styleId)?.premium || false
@@ -320,11 +339,7 @@ export default function TravelStampGenerator() {
 
   // Verificar si se está usando alguna característica premium
   const isUsingPremiumFeature = () => {
-    return (
-      isMapStylePremium(mapStyle) ||
-      isFormatPremium(stampFormat) ||
-      tripComment.length > 0
-    )
+    return isMapStylePremium(mapStyle) || isFormatPremium(stampFormat) || tripComment.length > 0
   }
 
   const updateRoute = () => {
@@ -632,11 +647,11 @@ export default function TravelStampGenerator() {
   }
 
   const getTemplateClasses = () => {
-    return borderColor;
+    return borderColor
   }
 
   const getTemplateTextColor = () => {
-    return textColor;
+    return textColor
   }
 
   const getFormatClasses = () => {
@@ -804,11 +819,6 @@ export default function TravelStampGenerator() {
     )
   }
 
-  useEffect(() => {
-    // Verificar si hay parámetros de compra en la URL
-    checkPurchaseFromURL()
-  }, [])
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-6">
@@ -819,8 +829,6 @@ export default function TravelStampGenerator() {
               <div className="flex-1">
                 <Label htmlFor="destination">Añadir destino</Label>
                 <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <                <div className="space-y-2">
                   <div className="flex gap-2">
                     <Input
                       id="destination"
@@ -938,13 +946,13 @@ export default function TravelStampGenerator() {
                             <div
                               key={color.value}
                               className={`h-8 rounded-md cursor-pointer border-2 ${
-                                backgroundColor === color.value ? 'border-amber-600' : 'border-transparent'
+                                backgroundColor === color.value ? "border-amber-600" : "border-transparent"
                               }`}
                               style={{ backgroundColor: color.value }}
                               onClick={() => {
-                                setBackgroundColor(color.value);
-                                setTextColor(color.textColor);
-                                setBorderColor(color.borderColor);
+                                setBackgroundColor(color.value)
+                                setTextColor(color.textColor)
+                                setBorderColor(color.borderColor)
                               }}
                               title={color.name}
                             />
@@ -1200,6 +1208,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
