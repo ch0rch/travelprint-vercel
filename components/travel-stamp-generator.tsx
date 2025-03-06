@@ -57,7 +57,7 @@ const stampFormats = [
     name: "Cuadrado (1:1)",
     icon: Square,
     containerClass: "w-full aspect-square",
-    mapClass: "w-full h-[250px]",
+    mapClass: "w-full h-[220px]",
     previewClass: "max-w-[350px] mx-auto",
   },
   {
@@ -813,42 +813,51 @@ export default function TravelStampGenerator() {
                 <p className="text-amber-800">Añade al menos dos destinos para generar tu estampita</p>
               </div>
             ) : (
-              <div className={getPreviewClasses()} ref={previewContainerRef}>
+              (
+                <div className={getPreviewClasses()} ref={previewContainerRef}>
                 <div
-                  className={`border-4 rounded-lg overflow-hidden ${getTemplateClasses()} ${getFormatClasses()} relative before:absolute before:inset-0 before:bg-[url('/textures/paper-texture.jpg')] before:bg-cover before:opacity-20 before:mix-blend-multiply shadow-xl`}
+                  className={`border-2 rounded-lg overflow-hidden ${getTemplateClasses()} ${getFormatClasses()} relative before:absolute before:inset-0 before:bg-[url('/textures/paper-texture.jpg')] before:bg-cover before:opacity-20 before:mix-blend-multiply shadow-xl`}
                 >
                   {/* Esquinas decorativas */}
-                  <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-amber-800/20 rounded-tl-lg" />
-                  <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-amber-800/20 rounded-tr-lg" />
-                  <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-amber-800/20 rounded-bl-lg" />
-                  <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-amber-800/20 rounded-br-lg" />
+                  <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-amber-800/20 rounded-tl-lg" />
+                  <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-amber-800/20 rounded-tr-lg" />
+                  <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-amber-800/20 rounded-bl-lg" />
+                  <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-amber-800/20 rounded-br-lg" />
 
                   {/* Contenido */}
                   <div className="relative z-10">
-                    <div className="p-3 text-center space-y-1">
-                      <h3 className="font-serif font-bold text-lg tracking-wide text-amber-900">{tripName}</h3>
+                    <div className="p-2 text-center space-y-0.5">
+                      <h3 className="font-serif font-bold text-base tracking-wide text-amber-900">{tripName}</h3>
                       {tripDate && (
-                        <p className="text-[11px] text-amber-700 mt-0.5 font-medium tracking-wider">{tripDate}</p>
+                        <p className="text-[10px] text-amber-700 font-medium tracking-wider">
+                          {tripDate}
+                        </p>
                       )}
                     </div>
 
                     <div ref={previewMapRef} className={getMapClasses()} />
 
-                    <div className="p-3 text-center space-y-2">
-                      <div className="inline-block px-3 py-1 bg-amber-100/50 rounded-full">
-                        <p className="text-amber-900 text-xs font-medium">
-                          <strong>{calculateTotalDistance()} km</strong> recorridos
+                    <div className="p-2 text-center space-y-1.5">
+                      <div className="inline-block px-2 py-0.5 bg-amber-100/50 rounded-full">
+                        <p className="text-amber-900 text-[10px] font-medium">
+                          <strong>{calculateTotalDistance()}&nbsp;km</strong>&nbsp;recorridos
                         </p>
                       </div>
+                      <p className="text-xs text-amber-80                        </p>
+                      </div>
 
-                      <p className="text-[10px] text-amber-800">{destinations.map((d) => d.name).join(" • ")}</p>
+                      <p className="text-[9px] text-amber-800">\
+                        {destinations.map((d) => d.name).join(" • ")}
+                      </p>
 
                       {tripComment && tripComment.length > 0 && (
-                        <div className="mt-2">
-                          <div className="relative px-6">
-                            <span className="absolute left-0 top-0 text-amber-800/30 text-lg">"</span>
-                            <p className="italic text-[10px] text-amber-800 leading-relaxed">{tripComment}</p>
-                            <span className="absolute right-0 bottom-0 text-amber-800/30 text-lg">"</span>
+                        <div className="mt-1">
+                          <div className="relative px-4">
+                            <span className="absolute left-0 top-0 text-amber-800/30 text-base">"</span>
+                            <p className="italic text-[9px] text-amber-800 leading-snug">
+                              {tripComment}
+                            </p>
+                            <span className="absolute right-0 bottom-0 text-amber-800/30 text-base">"</span>
                           </div>
                         </div>
                       )}
@@ -856,6 +865,7 @@ export default function TravelStampGenerator() {
                   </div>
                 </div>
               </div>
+              )
             )}
             <div className="mt-6 space-y-3">
               <Button
@@ -894,6 +904,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
