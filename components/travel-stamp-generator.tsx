@@ -813,8 +813,7 @@ export default function TravelStampGenerator() {
                 <p className="text-amber-800">Añade al menos dos destinos para generar tu estampita</p>
               </div>
             ) : (
-              (
-                <div className={getPreviewClasses()} ref={previewContainerRef}>
+              <div className={getPreviewClasses()} ref={previewContainerRef}>
                 <div
                   className={`border-2 rounded-lg overflow-hidden ${getTemplateClasses()} ${getFormatClasses()} relative before:absolute before:inset-0 before:bg-[url('/textures/paper-texture.jpg')] before:bg-cover before:opacity-20 before:mix-blend-multiply shadow-xl`}
                 >
@@ -828,11 +827,7 @@ export default function TravelStampGenerator() {
                   <div className="relative z-10">
                     <div className="p-2 text-center space-y-0.5">
                       <h3 className="font-serif font-bold text-base tracking-wide text-amber-900">{tripName}</h3>
-                      {tripDate && (
-                        <p className="text-[10px] text-amber-700 font-medium tracking-wider">
-                          {tripDate}
-                        </p>
-                      )}
+                      {tripDate && <p className="text-[10px] text-amber-700 font-medium tracking-wider">{tripDate}</p>}
                     </div>
 
                     <div ref={previewMapRef} className={getMapClasses()} />
@@ -843,20 +838,14 @@ export default function TravelStampGenerator() {
                           <strong>{calculateTotalDistance()}&nbsp;km</strong>&nbsp;recorridos
                         </p>
                       </div>
-                      <p className="text-xs text-amber-80                        </p>
-                      </div>
 
-                      <p className="text-[9px] text-amber-800">\
-                        {destinations.map((d) => d.name).join(" • ")}
-                      </p>
+                      <p className="text-[9px] text-amber-800">{destinations.map((d) => d.name).join(" • ")}</p>
 
                       {tripComment && tripComment.length > 0 && (
                         <div className="mt-1">
                           <div className="relative px-4">
                             <span className="absolute left-0 top-0 text-amber-800/30 text-base">"</span>
-                            <p className="italic text-[9px] text-amber-800 leading-snug">
-                              {tripComment}
-                            </p>
+                            <p className="italic text-[9px] text-amber-800 leading-snug">{tripComment}</p>
                             <span className="absolute right-0 bottom-0 text-amber-800/30 text-base">"</span>
                           </div>
                         </div>
@@ -865,7 +854,6 @@ export default function TravelStampGenerator() {
                   </div>
                 </div>
               </div>
-              )
             )}
             <div className="mt-6 space-y-3">
               <Button
@@ -904,6 +892,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
