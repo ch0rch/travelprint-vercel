@@ -9,18 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  MapPin,
-  Plus,
-  Download,
-  Trash2,
-  Smartphone,
-  Square,
-  ImageIcon,
-  MonitorSmartphone,
-  Crown,
-  RefreshCw,
-} from "lucide-react"
+import { MapPin, Plus, Download, Trash2, Smartphone, Square, ImageIcon, MonitorSmartphone, Crown, RefreshCw } from 'lucide-react'
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import html2canvas from "html2canvas"
@@ -273,7 +262,7 @@ export default function TravelStampGenerator() {
 
         // Añadir marcadores para cada destino
         destinations.forEach((dest) => {
-          new mapboxgl.Marker({ color: routeColor })
+          new mapboxgl.Marker({ color: routeColor, scale: 0.7 })
             .setLngLat(dest.coordinates)
             .setPopup(new mapboxgl.Popup().setHTML(`<h3>${dest.name}</h3>`))
             .addTo(mapRef.current!)
@@ -316,7 +305,6 @@ export default function TravelStampGenerator() {
         },
       })
 
-      // Añadir la capa de la ruta
       previewMapRef2.current.addLayer({
         id: "route",
         type: "line",
@@ -332,12 +320,16 @@ export default function TravelStampGenerator() {
         },
       })
 
-      // Añadir marcadores para cada destino
+      // Marcadores más pequeños
       destinations.forEach((dest) => {
-        new mapboxgl.Marker({ color: routeColor }).setLngLat(dest.coordinates).addTo(previewMapRef2.current!)
+        new mapboxgl.Marker({
+          color: routeColor,
+          scale: 0.7, // Reducir el tamaño del marcador
+        })
+          .setLngLat(dest.coordinates)
+          .addTo(previewMapRef2.current!)
       })
     } else {
-      // Actualizar la ruta existente
       previewMapRef2.current.getSource("route").setData({
         type: "Feature",
         properties: {},
@@ -347,7 +339,6 @@ export default function TravelStampGenerator() {
         },
       })
 
-      // Actualizar el estilo de la ruta
       previewMapRef2.current.setPaintProperty("route", "line-color", routeColor)
       previewMapRef2.current.setPaintProperty("route", "line-width", routeWidth[0])
     }
@@ -816,43 +807,47 @@ export default function TravelStampGenerator() {
                   className={`border-8 rounded-lg overflow-hidden ${getTemplateClasses()} ${getFormatClasses()} relative before:absolute before:inset-0 before:bg-[url('/textures/paper-texture.jpg')] before:bg-cover before:opacity-20 before:mix-blend-multiply shadow-xl`}
                 >
                   {/* Esquinas decorativas */}
-                  <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-amber-800/20 rounded-tl-lg" />
-                  <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-amber-800/20 rounded-tr-lg" />
-                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-amber-800/20 rounded-bl-lg" />
-                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-amber-800/20 rounded-br-lg" />
+                  <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-amber-800/20 rounded-tl-lg" />
+                  <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-amber-800/20 rounded-tr-lg" />
+                  <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-amber-800/20 rounded-bl-lg" />
+                  <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-amber-800/20 rounded-br-lg" />
 
                   {/* Contenido */}
                   <div className="relative z-10">
-                    <div className="p-4 text-center">
-                      <h3 className="font-serif font-bold text-2xl tracking-wide text-amber-900">{tripName}</h3>
-                      {tripDate && <p className="text-sm text-amber-700 mt-1 font-medium tracking-wider">{tripDate}</p>}
+                    <div className="p-3 text-center">
+                      <h3 className="font-serif font-bold text-xl tracking-wide text-amber-900">{tripName}</h3>
+                      {tripDate && (
+                        <p className="text-xs text-amber-700 mt-0.5 font-medium tracking-wider">
+                          {tripDate}
+                        </p>
+                      )}
                     </div>
 
                     <div ref={previewMapRef} className={getMapClasses()} />
 
-                    <div className="p-4 text-center">
-                      <div className="inline-block px-4 py-2 bg-amber-100/50 rounded-full">
-                        <p className="text-amber-900 font-medium">
+                    <div className="p-3 text-center space-y-2">
+                      <div className="inline-block px-3 py-1 bg-amber-100/50 rounded-full">
+                        <p className="text-amber-900 text-sm font-medium">
                           <strong>{calculateTotalDistance()} km</strong> recorridos
                         </p>
                       </div>
-                    </div>
 
-                    <p className="text-xs text-amber-700 mt-3">
-                      {destinations.map((d) => d.name).join(" • ")}
-                      mt-3">
-                      {destinations.map((d) => d.name).join(" • ")}
-                    </p>
+                      <p className="text-xs text-                        </p>
 
-                    {tripComment && (
-                      <div className="mt-4 px-6">
-                        <div className="relative">
-                          <div className="absolute -left-4 top-0 text-amber-800/30 text-xl">"</div>
-                          <p className="italic text-sm text-amber-800 leading-relaxed">{tripComment}</p>
-                          <div className="absolute -right-4 bottom-0 text-amber-800/30 text-xl">"</div>
+                      </p>
+
+                      {tripComment && (
+                        <div className="mt-2 px-4">
+                          <div className="relative">
+                            <div className="absolute -left-3 top-0 text-amber-800/30 text-base">"</div>
+                            <p className="italic text-xs text-amber-800 leading-relaxed px-4">
+                              {tripComment}
+                            </p>
+                            <div className="absolute -right-3 bottom-0 text-amber-800/30 text-base">"</div>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -894,8 +889,6 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
-
-
 
 
 
