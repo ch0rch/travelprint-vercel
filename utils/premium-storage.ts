@@ -1,6 +1,6 @@
 // Claves para almacenamiento local
 const PREMIUM_KEY = "premiumStatus"
-const ORDER_ID_KEY = "orderId"
+const LICENSE_KEY_KEY = "licenseKey"
 const EXPIRY_DATE_KEY = "expiryDate"
 
 // Duración de la suscripción premium en milisegundos (3 meses)
@@ -10,7 +10,7 @@ const PREMIUM_DURATION = 1000 * 60 * 60 * 24 * 90 // 90 días
 const isBrowser = typeof window !== "undefined"
 
 // Función para verificar y guardar el estado premium
-export async function verifyAndSavePremiumStatus(orderIdOrLicense: string): Promise<boolean> {
+export async function verifyAndSavePremiumStatus(licenseKey: string): Promise<boolean> {
   try {
     const response = await fetch("/api/verify-purchase", {
       method: "POST",
@@ -18,7 +18,7 @@ export async function verifyAndSavePremiumStatus(orderIdOrLicense: string): Prom
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        orderId: orderIdOrLicense,
+        licenseKey: licenseKey,
         // Añadir el timestamp actual para evitar problemas de caché
         timestamp: Date.now(),
       }),
@@ -34,7 +34,7 @@ export async function verifyAndSavePremiumStatus(orderIdOrLicense: string): Prom
     if (data.success) {
       // Guardar con la fecha de expiración proporcionada por el servidor
       localStorage.setItem(PREMIUM_KEY, "true")
-      localStorage.setItem(ORDER_ID_KEY, orderIdOrLicense)
+      localStorage.setItem(LICENSE_KEY_KEY, licenseKey)
       localStorage.setItem(EXPIRY_DATE_KEY, data.expiryDate.toString())
 
       // Forzar una recarga de la página para actualizar la UI
@@ -44,7 +44,7 @@ export async function verifyAndSavePremiumStatus(orderIdOrLicense: string): Prom
 
     return false
   } catch (error) {
-    console.error("Error verifying purchase:", error)
+    console.error("Error verifying license:", error)
     return false
   }
 }
@@ -73,10 +73,10 @@ export function isPremiumUser(): boolean {
   }
 }
 
-// Obtener el ID de orden
-export function getOrderId(): string | null {
+// Obtener la clave de licencia
+export function getLicenseKey(): string | null {
   if (!isBrowser) return null
-  return localStorage.getItem(ORDER_ID_KEY)
+  return localStorage.getItem(LICENSE_KEY_KEY)
 }
 
 // Función para obtener la fecha de expiración
@@ -109,7 +109,7 @@ export function clearPremiumStatus(): void {
   if (!isBrowser) return
 
   localStorage.removeItem(PREMIUM_KEY)
-  localStorage.removeItem(ORDER_ID_KEY)
+  localStorage.removeItem(LICENSE_KEY_KEY)
   localStorage.removeItem(EXPIRY_DATE_KEY)
 }
 
@@ -120,18 +120,19 @@ export function checkPurchaseFromURL(): void {
   try {
     // Verificar si hay parámetros de compra en la URL
     const urlParams = new URLSearchParams(window.location.search)
-    const orderId = urlParams.get("order_id")
     const licenseKey = urlParams.get("license_key")
 
-    if (orderId || licenseKey) {
+    if (licenseKey) {
       // Limpiar la URL para evitar verificaciones duplicadas
       window.history.replaceState({}, document.title, window.location.pathname)
 
       // Verificar la compra
-      verifyAndSavePremiumStatus(orderId || licenseKey || "")
+      verifyAndSavePremiumStatus(licenseKey)
     }
   } catch (error) {
     console.error("Error checking purchase from URL:", error)
   }
 }
+
+
 

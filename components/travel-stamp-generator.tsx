@@ -30,6 +30,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { isPremiumUser, getExpiryDate, getRemainingDays, checkPurchaseFromURL } from "@/utils/premium-storage"
 import PremiumBadge from "@/components/premium-badge"
 import ExpiryReminderModal from "@/components/expiry-reminder-modal"
+import ActivatePremiumModal from "@/components/activate-premium-modal"
 
 // Normalmente usaríamos una variable de entorno, pero para el prototipo usamos un token público
 mapboxgl.accessToken = "pk.eyJ1Ijoiam9yamVyb2phcyIsImEiOiJjbTd2eG42bXYwMTNlMm1vcWRycWpicmRhIn0.hDwomrUtCTWGe0gtLHil2Q"
@@ -118,6 +119,7 @@ export default function TravelStampGenerator() {
   const [expiryDate, setExpiryDate] = useState<Date | null>(null)
   const [remainingDays, setRemainingDays] = useState<number | null>(null)
   const [showExpiryReminder, setShowExpiryReminder] = useState(false)
+  const [showActivateModal, setShowActivateModal] = useState(false) // Nuevo estado para el modal de activación
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const previewMapRef = useRef<HTMLDivElement>(null)
@@ -794,7 +796,7 @@ export default function TravelStampGenerator() {
     const purchaseId = Date.now().toString()
 
     // Construir la URL de retorno a la aplicación
-    const returnUrl = typeof window !== "undefined" ? `${window.location.origin}?order_id={order_id}` : ""
+    const returnUrl = typeof window !== "undefined" ? `${window.location.origin}?license_key={license_key}` : ""
 
     // Construir la URL con los parámetros personalizados
     const customParams = new URLSearchParams({
@@ -812,7 +814,7 @@ export default function TravelStampGenerator() {
 
     // Mostrar instrucciones al usuario
     alert(
-      "Se ha abierto la página de pago en una nueva pestaña. Después de completar tu compra, serás redirigido automáticamente a esta página.",
+      "Se ha abierto la página de pago en una nueva pestaña. Después de completar tu compra, serás redirigido automáticamente a esta página. Si no eres redirigido, puedes activar tu licencia manualmente con el botón 'Activar Premium'.",
     )
   }
 
@@ -1200,6 +1202,12 @@ export default function TravelStampGenerator() {
                 <Crown className="h-4 w-4 mr-2" />
                 {isPremium ? "Renovar premium ($5)" : "Descarga premium ($5)"}
               </Button>
+              {!isPremium && (
+                <Button className="w-full" variant="outline" onClick={() => setShowActivateModal(true)}>
+                  <Crown className="h-4 w-4 mr-2" />
+                  Activar Premium
+                </Button>
+              )}
               <div className="mt-2 text-center">
                 <button
                   onClick={refreshPreview}
@@ -1246,9 +1254,11 @@ export default function TravelStampGenerator() {
       {isPremium && showExpiryReminder && (
         <ExpiryReminderModal onRenew={openLemonSqueezyCheckout} onClose={() => setShowExpiryReminder(false)} />
       )}
+      {showActivateModal && <ActivatePremiumModal onClose={() => setShowActivateModal(false)} />}
     </div>
   )
 }
+
 
 
 

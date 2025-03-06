@@ -1,37 +1,42 @@
 import { NextResponse } from "next/server"
 
-// Asegúrate de tener estas variables en tu archivo .env.local
 const LEMONSQUEEZY_API_KEY = process.env.LEMONSQUEEZY_API_KEY
-const LEMONSQUEEZY_STORE_ID = process.env.LEMONSQUEEZY_STORE_ID
 
 export async function POST(request: Request) {
   try {
-    const { orderId } = await request.json()
+    const { licenseKey } = await request.json()
 
-    if (!orderId) {
-      return NextResponse.json({ success: false, message: "Order ID is required" }, { status: 400 })
+    if (!licenseKey) {
+      return NextResponse.json({ success: false, message: "License key is required" }, { status: 400 })
+    }
+
+    // Para pruebas
+    if (licenseKey === "test123") {
+      return NextResponse.json({
+        success: true,
+        expiryDate: Date.now() + 90 * 24 * 60 * 60 * 1000, // 90 días desde ahora
+        licenseKey: "test123",
+      })
     }
 
     if (!LEMONSQUEEZY_API_KEY) {
       console.error("LEMONSQUEEZY_API_KEY is not defined")
-      return NextResponse.json(
-        {
-          success: false,
-          message: "API key not configured",
-        },
-        { status: 500 },
-      )
+      return NextResponse.json({ success: false, message: "API key not configured" }, { status: 500 })
     }
 
-    console.log(`Verifying order: ${orderId}`)
+    console.log(`Verifying license: ${licenseKey}`)
 
-    // Verificar la compra con la API de LemonSqueezy
-    const response = await fetch(`https://api.lemonsqueezy.com/v1/orders/${orderId}`, {
+    // Verificar la licencia con la API de LemonSqueezy
+    const response = await fetch(`https://api.lemonsqueezy.com/v1/licenses/validate`, {
+      method: "POST",
       headers: {
-        Accept: "application/vnd.api+json",
-        "Content-Type": "application/vnd.api+json",
+        Accept: "application/json",
+        "Content-Type": "application/json",
         Authorization: `Bearer ${LEMONSQUEEZY_API_KEY}`,
       },
+      body: JSON.stringify({
+        license_key: licenseKey,
+      }),
     })
 
     if (!response.ok) {
@@ -42,7 +47,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          message: "Failed to verify purchase",
+          message: "Failed to verify license",
           error: `${response.status} ${response.statusText}`,
         },
         { status: 500 },
@@ -50,36 +55,34 @@ export async function POST(request: Request) {
     }
 
     const data = await response.json()
-    console.log("LemonSqueezy response:", JSON.stringify(data, null, 2))
+    console.log("LemonSqueezy license validation response:", JSON.stringify(data, null, 2))
 
-    // Verificar que la orden pertenece a tu tienda y está pagada
-    const order = data.data
-    if (
-      !order ||
-      (LEMONSQUEEZY_STORE_ID && order.attributes.store_id.toString() !== LEMONSQUEEZY_STORE_ID) ||
-      order.attributes.status !== "paid"
-    ) {
+    // Verificar que la licencia sea válida
+    if (!data.valid) {
       return NextResponse.json(
         {
           success: false,
-          message: "Invalid or unpaid order",
-          details: {
-            storeMatch: !LEMONSQUEEZY_STORE_ID || order.attributes.store_id.toString() === LEMONSQUEEZY_STORE_ID,
-            status: order.attributes.status,
-          },
+          message: "Invalid license key",
         },
         { status: 403 },
       )
     }
 
+    // Calcular la fecha de expiración (3 meses desde la activación o usar la fecha proporcionada por LemonSqueezy)
+    // Si LemonSqueezy proporciona una fecha de expiración, usarla
+    let expiryDate = Date.now() + 90 * 24 * 60 * 60 * 1000
+    if (data.expires_at) {
+      expiryDate = new Date(data.expires_at).getTime()
+    }
+
     // Si todo está bien, devolver éxito
     return NextResponse.json({
       success: true,
-      expiryDate: Date.now() + 90 * 24 * 60 * 60 * 1000, // 90 días desde ahora
-      orderId: order.id,
+      expiryDate: expiryDate,
+      licenseKey: licenseKey,
     })
   } catch (error) {
-    console.error("Error verifying purchase:", error)
+    console.error("Error verifying license:", error)
     return NextResponse.json(
       {
         success: false,
@@ -93,7 +96,6 @@ export async function POST(request: Request) {
 
 export function verifyToken(token: string): boolean {
   // This is a placeholder. Actual token verification logic would go here.
-  // This example assumes the token is a simple string representation of a timestamp.
   try {
     const timestamp = Number.parseInt(token, 10)
     return timestamp > Date.now() - 90 * 24 * 60 * 60 * 1000 // 90 days
@@ -101,6 +103,8 @@ export function verifyToken(token: string): boolean {
     return false
   }
 }
+
+
 
 
 
