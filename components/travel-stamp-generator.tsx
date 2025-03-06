@@ -20,10 +20,13 @@ import {
   MonitorSmartphone,
   Crown,
   RefreshCw,
+  Lock,
+  Sparkles,
 } from "lucide-react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import html2canvas from "html2canvas"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 // Normalmente usaríamos una variable de entorno, pero para el prototipo usamos un token público
 mapboxgl.accessToken = "pk.eyJ1Ijoiam9yamVyb2phcyIsImEiOiJjbTd2eG42bXYwMTNlMm1vcWRycWpicmRhIn0.hDwomrUtCTWGe0gtLHil2Q"
@@ -38,17 +41,20 @@ interface Destination {
 }
 
 const mapStyles = [
-  { id: "streets-v12", name: "Calles" },
-  { id: "outdoors-v12", name: "Aventura" },
-  { id: "light-v11", name: "Claro" },
-  { id: "dark-v11", name: "Oscuro" },
-  { id: "satellite-v9", name: "Satélite" },
+  { id: "streets-v12", name: "Calles", premium: false },
+  { id: "outdoors-v12", name: "Aventura", premium: false },
+  { id: "light-v11", name: "Claro", premium: false },
+  { id: "dark-v11", name: "Oscuro", premium: true },
+  { id: "satellite-v9", name: "Satélite", premium: true },
+  { id: "satellite-streets-v12", name: "Satélite con calles", premium: true },
 ]
 
 const stampTemplates = [
-  { id: "vintage", name: "Vintage", borderColor: "border-amber-800", bgColor: "bg-amber-100" },
-  { id: "modern", name: "Moderno", borderColor: "border-slate-800", bgColor: "bg-white" },
-  { id: "adventure", name: "Aventura", borderColor: "border-emerald-800", bgColor: "bg-emerald-50" },
+  { id: "vintage", name: "Vintage", borderColor: "border-amber-800", bgColor: "bg-amber-100", premium: false },
+  { id: "modern", name: "Moderno", borderColor: "border-slate-800", bgColor: "bg-white", premium: false },
+  { id: "adventure", name: "Aventura", borderColor: "border-emerald-800", bgColor: "bg-emerald-50", premium: true },
+  { id: "night", name: "Nocturno", borderColor: "border-indigo-900", bgColor: "bg-indigo-950", premium: true },
+  { id: "desert", name: "Desierto", borderColor: "border-amber-600", bgColor: "bg-amber-50", premium: true },
 ]
 
 const stampFormats = [
@@ -59,6 +65,7 @@ const stampFormats = [
     containerClass: "w-full aspect-square",
     mapClass: "w-full h-[260px]",
     previewClass: "max-w-[350px] mx-auto",
+    premium: false,
   },
   {
     id: "portrait",
@@ -67,6 +74,7 @@ const stampFormats = [
     containerClass: "w-full aspect-[4/5]",
     mapClass: "w-full h-[340px]",
     previewClass: "max-w-[280px] mx-auto",
+    premium: true,
   },
   {
     id: "story",
@@ -75,6 +83,7 @@ const stampFormats = [
     containerClass: "w-full aspect-[9/16]",
     mapClass: "w-full h-[400px]",
     previewClass: "max-w-[220px] mx-auto",
+    premium: true,
   },
   {
     id: "landscape",
@@ -83,6 +92,7 @@ const stampFormats = [
     containerClass: "w-full aspect-[16/9]",
     mapClass: "w-full h-[240px]",
     previewClass: "max-w-[350px] mx-auto",
+    premium: true,
   },
 ]
 
@@ -100,6 +110,8 @@ export default function TravelStampGenerator() {
   const [tripComment, setTripComment] = useState("")
   const [isDownloading, setIsDownloading] = useState(false)
   const [tempMarker, setTempMarker] = useState<mapboxgl.Marker | null>(null)
+  const [isPremium, setIsPremium] = useState(false)
+  const [showPremiumModal, setShowPremiumModal] = useState(false)
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const previewMapRef = useRef<HTMLDivElement>(null)
@@ -238,6 +250,31 @@ export default function TravelStampGenerator() {
 
     return () => clearTimeout(timer)
   }, [stampFormat, destinations])
+
+  // Verificar si un estilo de mapa es premium
+  const isMapStylePremium = (styleId: string) => {
+    return mapStyles.find((style) => style.id === styleId)?.premium || false
+  }
+
+  // Verificar si una plantilla es premium
+  const isTemplateStylePremium = (templateId: string) => {
+    return stampTemplates.find((template) => template.id === templateId)?.premium || false
+  }
+
+  // Verificar si un formato es premium
+  const isFormatPremium = (formatId: string) => {
+    return stampFormats.find((format) => format.id === formatId)?.premium || false
+  }
+
+  // Verificar si se está usando alguna característica premium
+  const isUsingPremiumFeature = () => {
+    return (
+      isMapStylePremium(mapStyle) ||
+      isTemplateStylePremium(stampTemplate) ||
+      isFormatPremium(stampFormat) ||
+      tripComment.length > 0
+    )
+  }
 
   const updateRoute = () => {
     if (!mapRef.current || destinations.length < 2) return
@@ -432,6 +469,12 @@ export default function TravelStampGenerator() {
   }
 
   const downloadFreeStamp = async () => {
+    // Si está usando características premium, mostrar modal de actualización
+    if (isUsingPremiumFeature() && !isPremium) {
+      setShowPremiumModal(true)
+      return
+    }
+
     setIsDownloading(true)
 
     try {
@@ -464,13 +507,15 @@ export default function TravelStampGenerator() {
         },
       })
 
-      // Añadir marca de agua
-      const ctx = canvas.getContext("2d")
-      if (ctx) {
-        ctx.font = "bold 16px Arial"
-        ctx.fillStyle = "rgba(0, 0, 0, 0.5)"
-        ctx.textAlign = "center"
-        ctx.fillText("Creado gratis con TravelPrint.me", canvas.width / 2, canvas.height - 20)
+      // Añadir marca de agua si no es premium
+      if (!isPremium) {
+        const ctx = canvas.getContext("2d")
+        if (ctx) {
+          ctx.font = "bold 16px Arial"
+          ctx.fillStyle = "rgba(0, 0, 0, 0.5)"
+          ctx.textAlign = "center"
+          ctx.fillText("Creado gratis con TravelPrint.me", canvas.width / 2, canvas.height - 20)
+        }
       }
 
       // Convertir a imagen y descargar
@@ -501,6 +546,8 @@ export default function TravelStampGenerator() {
         .Setup({
           eventCallback: (event: any) => {
             if (event.event === "Checkout.Success") {
+              // Activar modo premium
+              setIsPremium(true)
               // Generar y descargar la imagen premium
               generatePremiumStamp()
             }
@@ -537,7 +584,7 @@ export default function TravelStampGenerator() {
 
       // Configuración de html2canvas
       const canvas = await html2canvas(previewContainerRef.current, {
-        scale: 4,
+        scale: 4, // Mayor resolución para premium
         useCORS: true,
         allowTaint: true,
         backgroundColor: "#ffffff",
@@ -645,6 +692,76 @@ export default function TravelStampGenerator() {
     }
   }
 
+  // Renderizar el modal de premium
+  const renderPremiumModal = () => {
+    if (!showPremiumModal) return null
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-md w-full">
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex items-center">
+              <Crown className="h-6 w-6 text-amber-500 mr-2" />
+              <h3 className="text-xl font-bold">Actualiza a Premium</h3>
+            </div>
+            <button onClick={() => setShowPremiumModal(false)} className="text-gray-500 hover:text-gray-700">
+              &times;
+            </button>
+          </div>
+
+          <p className="mb-4">Estás utilizando características premium:</p>
+
+          <ul className="mb-4 space-y-2">
+            {isMapStylePremium(mapStyle) && (
+              <li className="flex items-center">
+                <Sparkles className="h-4 w-4 text-amber-500 mr-2" />
+                Estilo de mapa premium
+              </li>
+            )}
+            {isTemplateStylePremium(stampTemplate) && (
+              <li className="flex items-center">
+                <Sparkles className="h-4 w-4 text-amber-500 mr-2" />
+                Plantilla premium
+              </li>
+            )}
+            {isFormatPremium(stampFormat) && (
+              <li className="flex items-center">
+                <Sparkles className="h-4 w-4 text-amber-500 mr-2" />
+                Formato premium
+              </li>
+            )}
+            {tripComment.length > 0 && (
+              <li className="flex items-center">
+                <Sparkles className="h-4 w-4 text-amber-500 mr-2" />
+                Comentarios personalizados
+              </li>
+            )}
+          </ul>
+
+          <p className="mb-6">
+            Actualiza a Premium por solo $5 para desbloquear todas las características y descargar sin marca de agua.
+          </p>
+
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setShowPremiumModal(false)} className="flex-1">
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                setShowPremiumModal(false)
+                openLemonSqueezyCheckout()
+              }}
+              className="flex-1 bg-gradient-to-r from-amber-500 to-amber-700"
+            >
+              <Crown className="h-4 w-4 mr-2" />
+              Actualizar
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-6">
@@ -722,14 +839,40 @@ export default function TravelStampGenerator() {
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="map-style">Estilo de mapa</Label>
-                        <Select value={mapStyle} onValueChange={setMapStyle}>
+                        <Select
+                          value={mapStyle}
+                          onValueChange={(value) => {
+                            if (isMapStylePremium(value) && !isPremium) {
+                              setShowPremiumModal(true)
+                            } else {
+                              setMapStyle
+                            }
+                            else
+                            \
+                              setMapStyle(value)
+                          }}
+                        >
                           <SelectTrigger id="map-style">
                             <SelectValue placeholder="Selecciona un estilo" />
                           </SelectTrigger>
                           <SelectContent>
                             {mapStyles.map((style) => (
-                              <SelectItem key={style.id} value={style.id}>
-                                {style.name}
+                              <SelectItem key={style.id} value={style.id} disabled={style.premium && !isPremium}>
+                                <div className="flex items-center">
+                                  {style.name}
+                                  {style.premium && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Crown className="h-3 w-3 ml-2 text-amber-500" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Característica premium</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -773,14 +916,41 @@ export default function TravelStampGenerator() {
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="stamp-template">Plantilla</Label>
-                        <Select value={stampTemplate} onValueChange={setStampTemplate}>
+                        <Select
+                          value={stampTemplate}
+                          onValueChange={(value) => {
+                            if (isTemplateStylePremium(value) && !isPremium) {
+                              setShowPremiumModal(true)
+                            } else {
+                              setStampTemplate(value)
+                            }
+                          }}
+                        >
                           <SelectTrigger id="stamp-template">
                             <SelectValue placeholder="Selecciona una plantilla" />
                           </SelectTrigger>
                           <SelectContent>
                             {stampTemplates.map((template) => (
-                              <SelectItem key={template.id} value={template.id}>
-                                {template.name}
+                              <SelectItem
+                                key={template.id}
+                                value={template.id}
+                                disabled={template.premium && !isPremium}
+                              >
+                                <div className="flex items-center">
+                                  {template.name}
+                                  {template.premium && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Crown className="h-3 w-3 ml-2 text-amber-500" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Característica premium</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -808,24 +978,50 @@ export default function TravelStampGenerator() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="trip-comment">
-                          Comentario
-                          <span className="text-xs text-muted-foreground ml-2">
-                            ({tripComment.length}/150 caracteres)
-                          </span>
-                        </Label>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="trip-comment">
+                            Comentario
+                            <span className="text-xs text-muted-foreground ml-2">
+                              ({tripComment.length}/150 caracteres)
+                            </span>
+                          </Label>
+                          {!isPremium && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center text-amber-500 text-xs">
+                                    <Lock className="h-3 w-3 mr-1" />
+                                    Premium
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Los comentarios son una característica premium</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                         <Textarea
                           id="trip-comment"
                           value={tripComment}
                           onChange={(e) => {
+                            if (!isPremium) {
+                              setShowPremiumModal(true)
+                              return
+                            }
                             // Limitar a 150 caracteres
                             if (e.target.value.length <= 150) {
                               setTripComment(e.target.value)
                             }
                           }}
-                          placeholder="Escribe un comentario sobre tu viaje..."
+                          placeholder={
+                            isPremium
+                              ? "Escribe un comentario sobre tu viaje..."
+                              : "Actualiza a premium para añadir comentarios"
+                          }
                           className="resize-none"
                           rows={3}
+                          disabled={!isPremium}
                         />
                       </div>
                     </div>
@@ -840,12 +1036,32 @@ export default function TravelStampGenerator() {
                             key={format.id}
                             className={`border rounded-lg p-4 cursor-pointer transition-all hover:bg-muted ${
                               stampFormat === format.id ? "bg-muted ring-2 ring-primary" : ""
-                            }`}
-                            onClick={() => setStampFormat(format.id)}
+                            } ${format.premium && !isPremium ? "opacity-50" : ""}`}
+                            onClick={() => {
+                              if (format.premium && !isPremium) {
+                                setShowPremiumModal(true)
+                              } else {
+                                setStampFormat(format.id)
+                              }
+                            }}
                           >
                             <div className="flex flex-col items-center gap-2 text-center">
                               <format.icon className="h-8 w-8 text-amber-600" />
-                              <span className="text-sm font-medium">{format.name}</span>
+                              <div className="flex items-center">
+                                <span className="text-sm font-medium">{format.name}</span>
+                                {format.premium && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Crown className="h-3 w-3 ml-2 text-amber-500" />
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Formato premium</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -895,7 +1111,7 @@ export default function TravelStampGenerator() {
                         </p>
                       </div>
 
-                      {tripComment && (
+                      {tripComment && isPremium && (
                         <div className="mt-1 px-3">
                           <div className="relative">
                             <span className="absolute left-0 top-0 text-amber-800/30 text-base">"</span>
@@ -936,16 +1152,44 @@ export default function TravelStampGenerator() {
                   Actualizar vista previa
                 </button>
               </div>
-              <p className="text-xs text-center text-muted-foreground mt-2">
-                La versión premium incluye alta resolución y sin marca de agua
-              </p>
+              <div className="mt-4 border-t pt-4">
+                <h3 className="text-sm font-medium mb-2 flex items-center">
+                  <Crown className="h-4 w-4 text-amber-500 mr-2" />
+                  Características Premium
+                </h3>
+                <ul className="text-xs text-muted-foreground space-y-1">
+                  <li className="flex items-center">
+                    <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
+                    Formatos adicionales (vertical, horizontal, historia)
+                  </li>
+                  <li className="flex items-center">
+                    <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
+                    Estilos de mapa premium (satélite, nocturno)
+                  </li>
+                  <li className="flex items-center">
+                    <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
+                    Comentarios personalizados
+                  </li>
+                  <li className="flex items-center">
+                    <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
+                    Descarga sin marca de agua
+                  </li>
+                  <li className="flex items-center">
+                    <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
+                    Alta resolución (4x)
+                  </li>
+                </ul>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
+      {renderPremiumModal()}
     </div>
   )
 }
+
+
 
 
 
