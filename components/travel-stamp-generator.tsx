@@ -846,7 +846,7 @@ export default function TravelStampGenerator() {
                           {index + 1}
                         </div>
                         <span>{dest.name}</span>
-                                                     </div>
+                      </div>
                       <Button variant="ghost" size="icon" onClick={() => removeDestination(dest.id)}>
                         <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>
@@ -856,11 +856,6 @@ export default function TravelStampGenerator() {
               </div>
             )}
 
-            <div
-              ref={mapContainerRef}
-              className="w-full h-[400px] rounded-lg overflow-hidden border-2 border-amber-200"
-            />
-
             {destinations.length > 0 && (
               <div className="mt-4 text-sm text-amber-800">
                 <p>
@@ -868,13 +863,7 @@ export default function TravelStampGenerator() {
                 </p>
               </div>
             )}
-            <Card>
-              <CardContent className="p-6">
-                <p>
-                  Distancia total aproximada: <strong>{calculateTotalDistance()} km</strong>
-                </p>
-              </CardContent>
-            </Card>
+            <Card className="mt-4">
               <CardContent className="p-6">
                 <Tabs defaultValue="map">
                   <TabsList className="mb-4">
@@ -1121,123 +1110,121 @@ export default function TravelStampGenerator() {
         </Card>
       </div>
 
-      <div
-  className =
-    "lg:col-span-1" >
-    (
-      <Card>
-        <CardContent className="p-6">
-          <h2>Vista Previa</h2>
-          {isPremium && <PremiumBadge onRenew={openLemonSqueezyCheckout} />}
-          {destinations.length < 2 ? (
-            <div className="border-2 border-dashed border-amber-200 rounded-lg p-8 text-center">
-              <MapPin className="h-12 w-12 mx-auto text-amber-300 mb-2" />
-              <p className="text-amber-800">Añade al menos dos destinos para generar tu estampita</p>
-            </div>
-          ) : (
-            <div className={getPreviewClasses()} ref={previewContainerRef}>
-              <div
-                className={`border-2 rounded-lg overflow-hidden ${getTemplateClasses()} ${getFormatClasses()} relative before:absolute before:inset-0 before:bg-[url('/textures/paper-texture.jpg')] before:bg-cover before:opacity-20 before:mix-blend-multiply shadow-xl`}
-              >
-                {/* Esquinas decorativas */}
-                <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-amber-800/20 rounded-tl-lg" />
-                <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-amber-800/20 rounded-tr-lg" />
-                <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-amber-800/20 rounded-bl-lg" />
-                <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-amber-800/20 rounded-br-lg" />
+      <div className="lg:col-span-1">
+        <Card>
+          <CardContent className="p-6">
+            <h2>Vista Previa</h2>
+            {isPremium && <PremiumBadge onRenew={openLemonSqueezyCheckout} />}
+            {destinations.length < 2 ? (
+              <div className="border-2 border-dashed border-amber-200 rounded-lg p-8 text-center">
+                <MapPin className="h-12 w-12 mx-auto text-amber-300 mb-2" />
+                <p className="text-amber-800">Añade al menos dos destinos para generar tu estampita</p>
+              </div>
+            ) : (
+              <div className={getPreviewClasses()} ref={previewContainerRef}>
+                <div
+                  className={`border-2 rounded-lg overflow-hidden ${getTemplateClasses()} ${getFormatClasses()} relative before:absolute before:inset-0 before:bg-[url('/textures/paper-texture.jpg')] before:bg-cover before:opacity-20 before:mix-blend-multiply shadow-xl`}
+                >
+                  {/* Esquinas decorativas */}
+                  <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-amber-800/20 rounded-tl-lg" />
+                  <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-amber-800/20 rounded-tr-lg" />
+                  <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-amber-800/20 rounded-bl-lg" />
+                  <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-amber-800/20 rounded-br-lg" />
 
-                {/* Contenido */}
-                <div className="relative z-10 flex flex-col h-full">
-                  <div className="p-2 text-center space-y-0.5">
-                    <h3 className="font-serif font-bold text-base tracking-wide text-amber-900">{tripName}</h3>
-                    {tripDate && <p className="text-[10px] text-amber-700 font-medium tracking-wider">{tripDate}</p>}
-                  </div>
-
-                  <div ref={previewMapRef} className={getMapClasses()} />
-
-                  <div className="p-2 text-center space-y-1.5 flex-1 flex flex-col justify-end">
-                    <div className="inline-block px-2 py-0.5 bg-amber-100/50 rounded-full">
-                      <p className="text-amber-900 text-[10px] font-medium">
-                        <strong>{calculateTotalDistance()}&nbsp;km</strong>&nbsp;recorridos
-                      </p>
+                  {/* Contenido */}
+                  <div className="relative z-10 flex flex-col h-full">
+                    <div className="p-2 text-center space-y-0.5">
+                      <h3 className="font-serif font-bold text-base tracking-wide text-amber-900">{tripName}</h3>
+                      {tripDate && <p className="text-[10px] text-amber-700 font-medium tracking-wider">{tripDate}</p>}
                     </div>
 
-                    {tripComment && isPremium && (
-                      <div className="mt-1 px-3">
-                        <div className="relative">
-                          <span className="absolute left-0 top-0 text-amber-800/30 text-base">"</span>
-                          <p className="italic text-[9px] text-amber-800 leading-snug px-4">{tripComment}</p>
-                          <span className="absolute right-0 bottom-0 text-amber-800/30 text-base">"</span>
-                        </div>
+                    <div ref={previewMapRef} className={getMapClasses()} />
+
+                    <div className="p-2 text-center space-y-1.5 flex-1 flex flex-col justify-end">
+                      <div className="inline-block px-2 py-0.5 bg-amber-100/50 rounded-full">
+                        <p className="text-amber-900 text-[10px] font-medium">
+                          <strong>{calculateTotalDistance()}&nbsp;km</strong>&nbsp;recorridos
+                        </p>
                       </div>
-                    )}
+
+                      {tripComment && isPremium && (
+                        <div className="mt-1 px-3">
+                          <div className="relative">
+                            <span className="absolute left-0 top-0 text-amber-800/30 text-base">"</span>
+                            <p className="italic text-[9px] text-amber-800 leading-snug px-4">{tripComment}</p>
+                            <span className="absolute right-0 bottom-0 text-amber-800/30 text-base">"</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-          <div className="mt-6 space-y-3">
-            <Button
-              className="w-full"
-              variant="outline"
-              disabled={destinations.length < 2 || isDownloading}
-              onClick={downloadFreeStamp}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              {isDownloading ? "Descargando..." : "Descarga gratuita con marca de agua"}
-            </Button>
-            <Button
-              className="w-full bg-gradient-to-r from-amber-500 to-amber-700 hover:from-amber-600 hover:to-amber-800"
-              disabled={destinations.length < 2}
-              onClick={openLemonSqueezyCheckout}
-            >
-              <Crown className="h-4 w-4 mr-2" />
-              {isPremium ? "Renovar premium ($5)" : "Descarga premium ($5)"}
-            </Button>
-            <div className="mt-2 text-center">
-              <button
-                onClick={refreshPreview}
-                className="text-xs text-amber-600 hover:text-amber-700 flex items-center justify-center mx-auto"
+            )}
+            <div className="mt-6 space-y-3">
+              <Button
+                className="w-full"
+                variant="outline"
+                disabled={destinations.length < 2 || isDownloading}
+                onClick={downloadFreeStamp}
               >
-                <RefreshCw className="h-3 w-3 mr-1" />
-                Actualizar vista previa
-              </button>
+                <Download className="h-4 w-4 mr-2" />
+                {isDownloading ? "Descargando..." : "Descarga gratuita con marca de agua"}
+              </Button>
+              <Button
+                className="w-full bg-gradient-to-r from-amber-500 to-amber-700 hover:from-amber-600 hover:to-amber-800"
+                disabled={destinations.length < 2}
+                onClick={openLemonSqueezyCheckout}
+              >
+                <Crown className="h-4 w-4 mr-2" />
+                {isPremium ? "Renovar premium ($5)" : "Descarga premium ($5)"}
+              </Button>
+              <div className="mt-2 text-center">
+                <button
+                  onClick={refreshPreview}
+                  className="text-xs text-amber-600 hover:text-amber-700 flex items-center justify-center mx-auto"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Actualizar vista previa
+                </button>
+              </div>
+              <div className="mt-4 border-t pt-4">
+                <h3 className="text-sm font-medium mb-2 flex items-center">
+                  <Crown className="h-4 w-4 text-amber-500 mr-2" />
+                  Características Premium
+                </h3>
+                <ul className="text-xs text-muted-foreground space-y-1">
+                  <li className="flex items-center">
+                    <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
+                    Formatos adicionales (vertical, horizontal, historia)
+                  </li>
+                  <li className="flex items-center">
+                    <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
+                    Estilos de mapa premium (satélite, nocturno)
+                  </li>
+                  <li className="flex items-center">
+                    <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
+                    Comentarios personalizados
+                  </li>
+                  <li className="flex items-center">
+                    <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
+                    Descarga sin marca de agua
+                  </li>
+                  <li className="flex items-center">
+                    <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
+                    Alta resolución (4x)
+                  </li>
+                </ul>
+              </div>
             </div>
-            <div className="mt-4 border-t pt-4">
-              <h3 className="text-sm font-medium mb-2 flex items-center">
-                <Crown className="h-4 w-4 text-amber-500 mr-2" />
-                Características Premium
-              </h3>
-              <ul className="text-xs text-muted-foreground space-y-1">
-                <li className="flex items-center">
-                  <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
-                  Formatos adicionales (vertical, horizontal, historia)
-                </li>
-                <li className="flex items-center">
-                  <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
-                  Estilos de mapa premium (satélite, nocturno)
-                </li>
-                <li className="flex items-center">
-                  <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
-                  Comentarios personalizados
-                </li>
-                <li className="flex items-center">
-                  <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
-                  Descarga sin marca de agua
-                </li>
-                <li className="flex items-center">
-                  <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
-                  Alta resolución (4x)
-                </li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  </div>
-  renderPremiumModal()
-  isPremium && <ExpiryReminderModal onRenew={openLemonSqueezyCheckout} onClose={() => setShowExpiryReminder(false)} />
-  </div>
+          </CardContent>
+        </Card>
+      </div>
+      {renderPremiumModal()}
+      {isPremium && (
+        <ExpiryReminderModal onRenew={openLemonSqueezyCheckout} onClose={() => setShowExpiryReminder(false)} />
+      )}
+    </div>
   )
 }
 
