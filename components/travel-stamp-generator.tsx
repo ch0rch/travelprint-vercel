@@ -746,9 +746,7 @@ export default function TravelStampGenerator() {
             )}
             {isTemplateStylePremium(stampTemplate) && (
               <li className="flex items-center">
-                <Sparkles className="h-4 w-4 text-amber  && (
-              <li className="flex items-center">
-                <Sparkles className=\"h-4 w-4 text-amber-500 mr-2" />
+                <Sparkles className="h-4 w-4 text-amber-500 mr-2" />
                 Plantilla premium
               </li>
             )}
@@ -1242,6 +1240,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
