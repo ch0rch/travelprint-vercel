@@ -34,11 +34,7 @@ import ExpiryReminderModal from "@/components/expiry-reminder-modal"
 // Normalmente usaríamos una variable de entorno, pero para el prototipo usamos un token público
 mapboxgl.accessToken = "pk.eyJ1Ijoiam9yamVyb2phcyIsImEiOiJjbTd2eG42bXYwMTNlMm1vcWRycWpicmRhIn0.hDwomrUtCTWGe0gtLHil2Q"
 
-// Reemplazar la constante LEMONSQUEEZY_PRODUCT_ID con la URL completa del producto
-// Cambiar esto:
-// const LEMONSQUEEZY_PRODUCT_ID = "462437"
-
-// Por esto:
+// URL directa al producto en LemonSqueezy
 const LEMONSQUEEZY_PRODUCT_URL = "https://travelprint.lemonsqueezy.com/buy/2002abe5-88e1-4541-95f6-8ca287abaa44"
 
 interface Destination {
@@ -750,7 +746,9 @@ export default function TravelStampGenerator() {
             )}
             {isTemplateStylePremium(stampTemplate) && (
               <li className="flex items-center">
-                <Sparkles className="h-4 w-4 text-amber-500 mr-2" />
+                <Sparkles className="h-4 w-4 text-amber  && (
+              <li className="flex items-center">
+                <Sparkles className=\"h-4 w-4 text-amber-500 mr-2" />
                 Plantilla premium
               </li>
             )}
@@ -792,50 +790,32 @@ export default function TravelStampGenerator() {
     )
   }
 
-  // Luego, actualizar la función openLemonSqueezyCheckout para usar la URL correcta
-  // Reemplazar la función actual:
-  // const openLemonSqueezyCheckout = () => {
-  //   // Generar un ID único para esta compra
-  //   const purchaseId = Date.now().toString();
-  //   
-  //   // URL directa a tu producto en LemonSqueezy
-  //   // Reemplaza "yourstore" con el nombre de tu tienda
-  //   const lemonSqueezyUrl = `https://yourstore.lemonsqueezy.com/checkout/buy/${LEMONSQUEEZY_PRODUCT_ID}?checkout[custom][purchase_id]=${purchaseId}&checkout[custom][trip_name]=${encodeURIComponent(tripName)}&checkout[custom][is_renewal]=${isPremium ? "true" : "false"}`;
-  //   
-  //   // Abrir en una nueva pestaña
-  //   window.open(lemonSqueezyUrl, '_blank');
-  //   
-  //   // Mostrar instrucciones al usuario
-  //   alert("Se ha abierto la página de pago en una nueva pestaña. Después de completar tu compra, vuelve a esta página y actualiza para activar tus beneficios premium.");
-  // };
-
-  // Por esta versión actualizada:
+  // Función para abrir el checkout de LemonSqueezy
   const openLemonSqueezyCheckout = () => {
     // Generar un ID único para esta compra
-    const purchaseId = Date.now().toString();
-    
+    const purchaseId = Date.now().toString()
+
     // Construir la URL con los parámetros personalizados
     const customParams = new URLSearchParams({
-      'checkout[custom][purchase_id]': purchaseId,
-      'checkout[custom][trip_name]': tripName,
-      'checkout[custom][is_renewal]': isPremium ? "true" : "false"
-    });
-    
+      "checkout[custom][purchase_id]": purchaseId,
+      "checkout[custom][trip_name]": tripName,
+      "checkout[custom][is_renewal]": isPremium ? "true" : "false",
+    })
+
     // URL completa
-    const lemonSqueezyUrl = `${LEMONSQUEEZY_PRODUCT_URL}?${customParams.toString()}`;
-    
+    const lemonSqueezyUrl = `${LEMONSQUEEZY_PRODUCT_URL}?${customParams.toString()}`
+
     // Abrir en una nueva pestaña
-    window.open(lemonSqueezyUrl, '_blank');
-    
+    window.open(lemonSqueezyUrl, "_blank")
+
     // Mostrar instrucciones al usuario
-    alert("Se ha abierto la página de pago en una nueva pestaña. Después de completar tu compra, vuelve a esta página y actualiza para activar tus beneficios premium.");
-  };
+    alert(
+      "Se ha abierto la página de pago en una nueva pestaña. Después de completar tu compra, vuelve a esta página y actualiza para activar tus beneficios premium.",
+    )
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 space-y-6">
-        <Card>
-          <CardContent className="p-6">
       <div className="lg:col-span-2 space-y-6">
         <Card>
           <CardContent className="p-6">
@@ -1262,6 +1242,7 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
 
 
 
