@@ -845,11 +845,8 @@ export default function TravelStampGenerator() {
                             if (isMapStylePremium(value) && !isPremium) {
                               setShowPremiumModal(true)
                             } else {
-                              setMapStyle
-                            }
-                            else
-                            \
                               setMapStyle(value)
+                            }
                           }}
                         >
                           <SelectTrigger id="map-style">
@@ -1188,6 +1185,7 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
 
 
 
