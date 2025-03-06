@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { MapPin, Plus, Download, Trash2, Smartphone, Square, ImageIcon, MonitorSmartphone, Crown } from "lucide-react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
+import html2canvas from "html2canvas"
 
 // Normalmente usaríamos una variable de entorno, pero para el prototipo usamos un token público
 mapboxgl.accessToken = "pk.eyJ1Ijoiam9yamVyb2phcyIsImEiOiJjbTd2eG42bXYwMTNlMm1vcWRycWpicmRhIn0.hDwomrUtCTWGe0gtLHil2Q"
@@ -120,6 +121,7 @@ export default function TravelStampGenerator() {
       container: previewMapRef.current,
       style: `mapbox://styles/mapbox/${mapStyle}`,
       interactive: false,
+      preserveDrawingBuffer: true, // Añade esta línea
     })
 
     return () => {
@@ -374,20 +376,54 @@ export default function TravelStampGenerator() {
     return Math.round(totalDistance)
   }
 
-  const downloadFreeStamp = () => {
+  const downloadFreeStamp = async () => {
     setIsDownloading(true)
 
-    // En una implementación real, usaríamos html2canvas o una biblioteca similar
-    // para capturar la vista previa y convertirla en una imagen descargable
-    setTimeout(() => {
-      alert(
-        "Descarga gratuita completada. En la versión completa, esta función permitiría guardar la imagen con marca de agua 'Creado gratis con TravelPrint.me'",
-      )
+    try {
+      if (!previewContainerRef.current) return
+
+      // Esperar a que el mapa termine de renderizarse completamente
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Capturar la vista previa como imagen
+      const canvas = await html2canvas(previewContainerRef.current, {
+        scale: 2, // Mayor calidad
+        useCORS: true, // Permitir imágenes de otros dominios
+        logging: false,
+        backgroundColor: null,
+        allowTaint: true,
+        foreignObjectRendering: true,
+      })
+
+      // Añadir marca de agua
+      const ctx = canvas.getContext("2d")
+      if (ctx) {
+        ctx.font = "14px Arial"
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)"
+        ctx.textAlign = "center"
+        ctx.fillText("Creado gratis con TravelPrint.me", canvas.width / 2, canvas.height - 20)
+      }
+
+      // Convertir a imagen y descargar
+      const image = canvas.toDataURL("image/png")
+      const link = document.createElement("a")
+      link.href = image
+      link.download = `${tripName.replace(/\s+/g, "-").toLowerCase()}-estampita.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (error) {
+      console.error("Error al generar la estampita:", error)
+      alert("Hubo un error al generar la estampita. Por favor, intenta de nuevo.")
+    } finally {
       setIsDownloading(false)
-    }, 1500)
+    }
   }
 
   const openLemonSqueezyCheckout = () => {
+    // Generar un ID único para esta compra
+    const purchaseId = Date.now().toString()
+
     // @ts-ignore - LemonSqueezy se carga mediante script externo
     if (window.createLemonSqueezy) {
       // @ts-ignore
@@ -396,8 +432,8 @@ export default function TravelStampGenerator() {
         .Setup({
           eventCallback: (event: any) => {
             if (event.event === "Checkout.Success") {
-              // Aquí manejaríamos la descarga después del pago exitoso
-              alert("¡Pago exitoso! Descargando estampita de alta calidad...")
+              // Generar y descargar la imagen premium
+              generatePremiumStamp()
             }
           },
         })
@@ -405,15 +441,47 @@ export default function TravelStampGenerator() {
           product: {
             id: LEMONSQUEEZY_PRODUCT_ID,
           },
-          // Podemos pasar datos personalizados como el nombre del viaje
-          // para personalizar la experiencia
           custom: {
+            purchase_id: purchaseId,
             trip_name: tripName,
             destinations: destinations.map((d) => d.name).join(", "),
           },
         })
     } else {
       alert("Error al cargar el checkout. Por favor, intenta de nuevo más tarde.")
+    }
+  }
+
+  const generatePremiumStamp = async () => {
+    try {
+      if (!previewContainerRef.current) return
+
+      // Esperar a que el mapa termine de renderizarse completamente
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Capturar la vista previa como imagen en alta calidad
+      const canvas = await html2canvas(previewContainerRef.current, {
+        scale: 4, // Calidad superior para versión premium
+        useCORS: true,
+        logging: false,
+        backgroundColor: null,
+        allowTaint: true,
+        foreignObjectRendering: true,
+      })
+
+      // Convertir a imagen y descargar
+      const image = canvas.toDataURL("image/png")
+      const link = document.createElement("a")
+      link.href = image
+      link.download = `${tripName.replace(/\s+/g, "-").toLowerCase()}-premium.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      alert("¡Gracias por tu compra! Tu estampita premium ha sido descargada.")
+    } catch (error) {
+      console.error("Error al generar la estampita premium:", error)
+      alert("Hubo un error al generar la estampita premium. Por favor, contacta a soporte.")
     }
   }
 
@@ -641,7 +709,6 @@ export default function TravelStampGenerator() {
         <Card>
           <CardContent className="p-6">
             <h2 className="text-xl font-bold mb-4 text-center">Vista Previa</h2>
-
             {destinations.length < 2 ? (
               <div className="border-2 border-dashed border-amber-200 rounded-lg p-8 text-center">
                 <MapPin className="h-12 w-12 mx-auto text-amber-300 mb-2" />
@@ -667,7 +734,6 @@ export default function TravelStampGenerator() {
                 </div>
               </div>
             )}
-
             <div className="mt-6 space-y-3">
               <Button
                 className="w-full"
