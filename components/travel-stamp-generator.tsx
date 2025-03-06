@@ -9,7 +9,18 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
-import { MapPin, Plus, Download, Trash2, Smartphone, Square, ImageIcon, MonitorSmartphone, Crown } from "lucide-react"
+import {
+  MapPin,
+  Plus,
+  Download,
+  Trash2,
+  Smartphone,
+  Square,
+  ImageIcon,
+  MonitorSmartphone,
+  Crown,
+  RefreshCw,
+} from "lucide-react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import html2canvas from "html2canvas"
@@ -204,6 +215,25 @@ export default function TravelStampGenerator() {
     })
   }, [destinations])
 
+  // Primero, añadimos el efecto de actualización del mapa cuando cambia el formato
+  useEffect(() => {
+    if (!previewMapRef2.current || destinations.length < 2) return
+
+    // Pequeño delay para asegurar que el contenedor tenga las nuevas dimensiones
+    const timer = setTimeout(() => {
+      previewMapRef2.current?.resize()
+
+      // Ajustar la vista para mostrar todos los destinos
+      const bounds = new mapboxgl.LngLatBounds()
+      destinations.forEach((dest) => {
+        bounds.extend(dest.coordinates as mapboxgl.LngLatLike)
+      })
+      previewMapRef2.current?.fitBounds(bounds, { padding: 30 })
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [stampFormat, destinations])
+
   const updateRoute = () => {
     if (!mapRef.current || destinations.length < 2) return
 
@@ -212,40 +242,42 @@ export default function TravelStampGenerator() {
 
     // Añadir o actualizar la fuente de datos
     if (!mapRef.current.getSource("route")) {
-      mapRef.current.addSource("route", {
-        type: "geojson",
-        data: {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "LineString",
-            coordinates,
+      mapRef.current.on("load", () => {
+        mapRef.current?.addSource("route", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "LineString",
+              coordinates,
+            },
           },
-        },
-      })
+        })
 
-      // Añadir la capa de la ruta
-      mapRef.current.addLayer({
-        id: "route",
-        type: "line",
-        source: "route",
-        layout: {
-          "line-join": "round",
-          "line-cap": "round",
-        },
-        paint: {
-          "line-color": routeColor,
-          "line-width": routeWidth[0],
-          "line-opacity": 0.8,
-        },
-      })
+        // Añadir la capa de la ruta
+        mapRef.current?.addLayer({
+          id: "route",
+          type: "line",
+          source: "route",
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": routeColor,
+            "line-width": routeWidth[0],
+            "line-opacity": 0.8,
+          },
+        })
 
-      // Añadir marcadores para cada destino
-      destinations.forEach((dest) => {
-        new mapboxgl.Marker({ color: routeColor })
-          .setLngLat(dest.coordinates)
-          .setPopup(new mapboxgl.Popup().setHTML(`<h3>${dest.name}</h3>`))
-          .addTo(mapRef.current!)
+        // Añadir marcadores para cada destino
+        destinations.forEach((dest) => {
+          new mapboxgl.Marker({ color: routeColor })
+            .setLngLat(dest.coordinates)
+            .setPopup(new mapboxgl.Popup().setHTML(`<h3>${dest.name}</h3>`))
+            .addTo(mapRef.current!)
+        })
       })
     } else {
       // Actualizar la ruta existente
@@ -548,6 +580,20 @@ export default function TravelStampGenerator() {
     return format?.previewClass || ""
   }
 
+  // Añadimos un botón de actualización
+  const refreshPreview = () => {
+    if (!previewMapRef2.current) return
+    previewMapRef2.current.resize()
+
+    if (destinations.length >= 2) {
+      const bounds = new mapboxgl.LngLatBounds()
+      destinations.forEach((dest) => {
+        bounds.extend(dest.coordinates as mapboxgl.LngLatLike)
+      })
+      previewMapRef2.current.fitBounds(bounds, { padding: 30 })
+    }
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-6">
@@ -707,13 +753,22 @@ export default function TravelStampGenerator() {
                       placeholder="Marzo 2025"
                     />
                   </div>
-
                   <div>
-                    <Label htmlFor="trip-comment">Comentario</Label>
+                    <Label htmlFor="trip-comment">
+                      Comentario
+                      <span className="text-xs text-muted-foreground ml-2">
+                        ({tripComment.length}/150 caracteres)
+                      </span>
+                    </Label>
                     <Textarea
                       id="trip-comment"
                       value={tripComment}
-                      onChange={(e) => setTripComment(e.target.value)}
+                      onChange={(e) => {
+                        // Limitar a 150 caracteres
+                        if (e.target.value.length <= 150) {
+                          setTripComment(e.target.value)
+                        }
+                      }}
                       placeholder="Escribe un comentario sobre tu viaje..."
                       className="resize-none"
                       rows={3}
@@ -759,20 +814,51 @@ export default function TravelStampGenerator() {
               </div>
             ) : (
               <div className={getPreviewClasses()} ref={previewContainerRef}>
-                <div className={`border-8 rounded-lg overflow-hidden ${getTemplateClasses()} ${getFormatClasses()}`}>
-                  <div className="p-4 text-center">
-                    <h3 className="font-bold text-xl">{tripName}</h3>
-                    {tripDate && <p className="text-sm opacity-75">{tripDate}</p>}
-                  </div>
+                <div className={`border-8 rounded-lg overflow-hidden ${getTemplateClasses()} ${getFormatClasses()} relative before:absolute before:inset-0 before:bg-[url('/paper-texture.png')] before:opacity-10 before:pointer-events-none shadow-xl`}>
+                  {/* Esquinas decorativas */}
+                  <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-amber-800/20 rounded-tl-lg" />
+                  <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-amber-800/20 rounded-tr-lg" />
+                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-amber-800/20 rounded-bl-lg" />
+                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-amber-800/20 rounded-br-lg" />
 
-                  <div ref={previewMapRef} className={getMapClasses()} />
+                  {/* Contenido */}
+                  <div className="relative z-10">
+                    <div className="p-4 text-center">
+                      <h3 className="font-serif font-bold text-2xl tracking-wide text-amber-900">{tripName}</h3>
+                      {tripDate && (
+                        <p className="text-sm text-amber-700 mt-1 font-medium tracking-wider">
+                          {tripDate}
+                        </p>
+                      )}
+                    </div>
 
-                  <div className="p-4 text-center text-sm">
-                    <p>
-                      <strong>{calculateTotalDistance()} km</strong> recorridos
-                    </p>
-                    <p className="text-xs opacity-75 mt-1">{destinations.map((d) => d.name).join(" • ")}</p>
-                    {tripComment && <p className="mt-2 italic text-xs border-t border-current pt-2">"{tripComment}"</p>}
+                    <div ref={previewMapRef} className={getMapClasses()} />
+
+                    <div className="p-4 text-center">
+                      <div className="inline-block px-4 py-2 bg-amber-100/50 rounded-full">
+                        <p className="text-amber-900 font-medium">
+                          <strong>{calculateTotalDistance()} km</strong> recorridos
+                        </p>
+                      </div>
+                      </div>
+
+                      <p className="text-xs text-amber-700 mt-3 font-medium">
+                        {destinations.map((d) => d.name).join(" • ")}
+                      </p>                        {destinations.map((d) => d.name).join(" • ")}
+                      </p>
+
+                      {tripComment && (
+                        <div className="mt-4 px-6">
+                          <div className="relative">
+                            <div className="absolute -left-4 top-0 text-amber-800/30 text-xl">"</div>
+                            <p className="italic text-sm text-amber-800 leading-relaxed">
+                              {tripComment}
+                            </p>
+                            <div className="absolute -right-4 bottom-0 text-amber-800/30 text-xl">"</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -787,7 +873,6 @@ export default function TravelStampGenerator() {
                 <Download className="h-4 w-4 mr-2" />
                 {isDownloading ? "Descargando..." : "Descarga gratuita con marca de agua"}
               </Button>
-
               <Button
                 className="w-full bg-gradient-to-r from-amber-500 to-amber-700 hover:from-amber-600 hover:to-amber-800"
                 disabled={destinations.length < 2}
@@ -796,17 +881,27 @@ export default function TravelStampGenerator() {
                 <Crown className="h-4 w-4 mr-2" />
                 Descarga premium ($5)
               </Button>
-
+              <div className="mt-2 text-center">
+                <button
+                  onClick={refreshPreview}
+                  className="text-xs text-amber-600 hover:text-amber-700 flex items-center justify-center mx-auto"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Actualizar vista previa
+                </button>
+              </div>
               <p className="text-xs text-center text-muted-foreground mt-2">
                 La versión premium incluye alta resolución y sin marca de agua
               </p>
             </div>
           </CardContent>
         </Card>
-      </div>
+  </div>
     </div>
   )
 }
+
+
 
 
 
