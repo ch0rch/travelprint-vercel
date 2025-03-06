@@ -27,7 +27,7 @@ import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import html2canvas from "html2canvas"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { savePremiumStatus, isPremiumUser, getExpiryDate, getRemainingDays } from "@/utils/premium-storage"
+import { isPremiumUser, getExpiryDate, getRemainingDays, verifyAndSavePremiumStatus } from "@/utils/premium-storage"
 import PremiumBadge from "@/components/premium-badge"
 import ExpiryReminderModal from "@/components/expiry-reminder-modal"
 
@@ -584,19 +584,25 @@ export default function TravelStampGenerator() {
       window
         .createLemonSqueezy()
         .Setup({
-          eventCallback: (event: any) => {
+          eventCallback: async (event: any) => {
             if (event.event === "Checkout.Success") {
               // Guardar el estado premium y el ID de orden
               const orderId = event.data?.order?.identifier || purchaseId
-              savePremiumStatus(orderId)
 
-              // Actualizar el estado
-              setIsPremium(true)
-              setExpiryDate(getExpiryDate())
-              setRemainingDays(getRemainingDays())
+              // Verificar la compra en el servidor
+              const verified = await verifyAndSavePremiumStatus(orderId)
 
-              // Generar y descargar la imagen premium
-              generatePremiumStamp()
+              if (verified) {
+                // Actualizar el estado
+                setIsPremium(true)
+                setExpiryDate(getExpiryDate())
+                setRemainingDays(getRemainingDays())
+
+                // Generar y descargar la imagen premium
+                generatePremiumStamp()
+              } else {
+                alert("No se pudo verificar tu compra. Por favor, contacta a soporte.")
+              }
             }
           },
         })
@@ -844,9 +850,11 @@ export default function TravelStampGenerator() {
               <div className="mb-4">
                 <h3 className="font-medium mb-2">Destinos ({destinations.length})</h3>
                 <div className="space-y-2 max-h-40 overflow-y-auto p-2 border rounded-md">
-                  {destinations.map((dest, index) => (
-                    <div key={dest.id} className="flex items-center justify-between bg-white p-2 rounded shadow-sm">
-                      <div className="flex items-center">
+                  {destinations.map(
+                    (dest, index) =>
+                      (
+                        <div key={dest.id} className="flex items-center justify-between bg-white p-2 rounded shadow                    <div key={dest.id} className="flex items-center justify-between bg-white p-2 rounded shadow-sm">
+                      <div className=\"flex items-center">
                         <div className="bg-amber-100 text-amber-800 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-xs font-bold">
                           {index + 1}
                         </div>
@@ -856,7 +864,8 @@ export default function TravelStampGenerator() {
                         <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>
                     </div>
-                  ))}
+                      ),
+                  )}
                 </div>
               </div>
             )}
@@ -1237,6 +1246,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 

@@ -1,7 +1,7 @@
 // Claves para almacenamiento local
-const PREMIUM_KEY = "rv_premium_status"
-const ORDER_ID_KEY = "rv_order_id"
-const EXPIRY_DATE_KEY = "rv_expiry_date"
+const PREMIUM_KEY = "premiumStatus"
+const ORDER_ID_KEY = "orderId"
+const EXPIRY_DATE_KEY = "expiryDate"
 
 // Duración de la suscripción premium en milisegundos (3 meses)
 const PREMIUM_DURATION = 1000 * 60 * 60 * 24 * 90 // 90 días
@@ -77,5 +77,31 @@ export function clearPremiumStatus(): void {
   localStorage.removeItem(EXPIRY_DATE_KEY)
 }
 
-
+// Función para verificar y guardar el estado premium
+export async function verifyAndSavePremiumStatus(orderId: string): Promise<boolean> {
+    try {
+      const response = await fetch("/api/verify-purchase", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ orderId }),
+      })
+  
+      const data = await response.json()
+  
+      if (data.success) {
+        // Guardar con la fecha de expiración proporcionada por el servidor
+        localStorage.setItem(PREMIUM_KEY, "true")
+        localStorage.setItem(ORDER_ID_KEY, orderId)
+        localStorage.setItem(EXPIRY_DATE_KEY, data.expiryDate.toString())
+        return true
+      }
+  
+      return false
+    } catch (error) {
+      console.error("Error verifying purchase:", error)
+      return false
+    }
+  }
 
