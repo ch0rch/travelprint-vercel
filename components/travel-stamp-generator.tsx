@@ -827,7 +827,7 @@ export default function TravelStampGenerator() {
                   <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-amber-800/20 rounded-br-lg" />
 
                   {/* Contenido */}
-                  <div className="relative z-10">
+                  <div className="relative z-10 flex flex-col h-full">
                     <div className="p-2 text-center space-y-0.5">
                       <h3 className="font-serif font-bold text-base tracking-wide text-amber-900">{tripName}</h3>
                       {tripDate && <p className="text-[10px] text-amber-700 font-medium tracking-wider">{tripDate}</p>}
@@ -835,20 +835,20 @@ export default function TravelStampGenerator() {
 
                     <div ref={previewMapRef} className={getMapClasses()} />
 
-                    <div className="p-2 text-center space-y-1.5">
+                    <div className="p-2 text-center space-y-1.5 flex-1 flex flex-col justify-end">
                       <div className="inline-block px-2 py-0.5 bg-amber-100/50 rounded-full">
                         <p className="text-amber-900 text-[10px] font-medium">
                           <strong>{calculateTotalDistance()}&nbsp;km</strong>&nbsp;recorridos
                         </p>
                       </div>
 
-                      <p className="text-[9px] text-amber-800">{destinations.map((d) => d.name).join(" • ")}</p>
+                      <p className="text-[9px] text-amber-800">00">{destinations.map((d) => d.name).join(" • ")}</p>
 
-                      {tripComment && tripComment.length > 0 && (
-                        <div className="mt-1">
-                          <div className="relative px-4">
+                      {tripComment && (
+                        <div className="mt-1 px-3">
+                          <div className="relative">
                             <span className="absolute left-0 top-0 text-amber-800/30 text-base">"</span>
-                            <p className="italic text-[9px] text-amber-800 leading-snug">{tripComment}</p>
+                            <p className="italic text-[9px] text-amber-800 leading-snug px-4">{tripComment}</p>
                             <span className="absolute right-0 bottom-0 text-amber-800/30 text-base">"</span>
                           </div>
                         </div>
@@ -895,6 +895,7 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
 
 
 
