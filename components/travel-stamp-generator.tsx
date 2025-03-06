@@ -839,6 +839,8 @@ export default function TravelStampGenerator() {
                       value={newDestination}
                       onChange={(e) => setNewDestination(e.target.value)}
                       placeholder="Ej: Talca, Constitución, Concepción..."
+                      on
+                      placeholder="Ej: Talca, Constitución, Concepción..."
                       onKeyDown={(e) => e.key === "Enter" && searchDestination()}
                     />
                     <Button onClick={searchDestination} disabled={isSearching || !newDestination.trim()}>
@@ -1192,7 +1194,11 @@ export default function TravelStampGenerator() {
                 onClick={downloadFreeStamp}
               >
                 <Download className="h-4 w-4 mr-2" />
-                {isDownloading ? "Descargando..." : "Descarga gratuita con marca de agua"}
+                {isDownloading
+                  ? "Descargando..."
+                  : isPremium
+                    ? "Descarga tu recuerdo"
+                    : "Descarga gratuita con marca de agua"}
               </Button>
               <Button
                 className="w-full bg-gradient-to-r from-amber-500 to-amber-700 hover:from-amber-600 hover:to-amber-800"
@@ -1258,6 +1264,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
