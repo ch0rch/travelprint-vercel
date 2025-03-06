@@ -1,6 +1,36 @@
 import { Button } from "@/components/ui/button"
-import { Crown } from "lucide-react"
+import { Crown, MapPin } from "lucide-react"
 import Link from "next/link"
+
+const exampleRoutes = [
+  {
+    id: 1,
+    title: "Ruta del Desierto Florido",
+    description: "De Copiapó a Huasco por la costa, atravesando el espectacular fenómeno del desierto florido",
+    distance: "280 km",
+    locations: ["Copiapó", "Caldera", "Huasco"],
+    image:
+      "https://api.mapbox.com/styles/v1/mapbox/light-v11/static/pin-s+e05d37(-70.338,--27.366),pin-s+e05d37(-70.776,-26.25),pin-s+e05d37(-71.22,-28.467)/-70.8,-27.3,7/400x300@2x?access_token=pk.eyJ1Ijoiam9yamVyb2phcyIsImEiOiJjbTd2eG42bXYwMTNlMm1vcWRycWpicmRhIn0.hDwomrUtCTWGe0gtLHil2Q",
+  },
+  {
+    id: 2,
+    title: "Ruta de los Lagos",
+    description: "Recorriendo los lagos del sur de Chile, desde Pucón hasta Puerto Varas",
+    distance: "320 km",
+    locations: ["Pucón", "Villarrica", "Puerto Varas"],
+    image:
+      "https://api.mapbox.com/styles/v1/mapbox/light-v11/static/pin-s+e05d37(-71.954,-39.272),pin-s+e05d37(-72.228,-39.536),pin-s+e05d37(-72.983,-41.319)/-72.2,-40.2,7/400x300@2x?access_token=pk.eyJ1Ijoiam9yamVyb2phcyIsImEiOiJjbTd2eG42bXYwMTNlMm1vcWRycWpicmRhIn0.hDwomrUtCTWGe0gtLHil2Q",
+  },
+  {
+    id: 3,
+    title: "Ruta del Vino",
+    description: "Un viaje por los valles vinícolas desde Casablanca hasta Santa Cruz",
+    distance: "245 km",
+    locations: ["Casablanca", "San Fernando", "Santa Cruz"],
+    image:
+      "https://api.mapbox.com/styles/v1/mapbox/light-v11/static/pin-s+e05d37(-71.409,-33.319),pin-s+e05d37(-70.987,-34.583),pin-s+e05d37(-71.365,-34.639)/-71.2,-34,7/400x300@2x?access_token=pk.eyJ1Ijoiam9yamVyb2phcyIsImEiOiJjbTd2eG42bXYwMTNlMm1vcWRycWpicmRhIn0.hDwomrUtCTWGe0gtLHil2Q",
+  },
+]
 
 export function HeroSection() {
   return (
@@ -48,21 +78,38 @@ export function HeroSection() {
           <div className="mt-12 relative">
             <div className="absolute inset-0 bg-gradient-to-t from-amber-50 to-transparent z-10 h-8 bottom-0 top-auto"></div>
             <div className="flex justify-center gap-4 overflow-x-auto pb-8 px-4">
-              {[1, 2, 3].map((i) => (
+              {exampleRoutes.map((route) => (
                 <div
-                  key={i}
-                  className="flex-shrink-0 w-48 h-64 rounded-lg border-2 border-amber-200 bg-white shadow-lg overflow-hidden"
+                  key={route.id}
+                  className="flex-shrink-0 w-72 rounded-lg border-2 border-amber-200 bg-white shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
                 >
-                  <div className="h-36 bg-amber-100 flex items-center justify-center">
+                  <div className="h-48 relative overflow-hidden">
                     <img
-                      src={`/placeholder.svg?height=144&width=192&text=Ejemplo ${i}`}
-                      alt={`Ejemplo de estampita ${i}`}
+                      src={route.image || "/placeholder.svg"}
+                      alt={`Mapa de ${route.title}`}
                       className="w-full h-full object-cover"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div className="absolute bottom-2 left-2 right-2 text-white">
+                      <div className="flex items-center text-xs font-medium bg-amber-600/90 rounded-full px-2 py-1 w-fit">
+                        <MapPin className="h-3 w-3 mr-1" />
+                        {route.distance}
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-3">
-                    <h3 className="font-medium text-amber-900 text-sm">Ruta de Aventura {i}</h3>
-                    <p className="text-amber-700 text-xs mt-1">Un recuerdo especial de tu viaje por la naturaleza</p>
+                  <div className="p-4">
+                    <h3 className="font-medium text-amber-900 text-lg mb-1">{route.title}</h3>
+                    <p className="text-amber-700 text-sm mb-2">{route.description}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {route.locations.map((location, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700"
+                        >
+                          {location}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -73,4 +120,6 @@ export function HeroSection() {
     </div>
   )
 }
+
+
 
