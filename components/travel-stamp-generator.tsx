@@ -22,6 +22,7 @@ import {
   RefreshCw,
   Lock,
   Sparkles,
+  Palette,
 } from "lucide-react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
@@ -37,6 +38,19 @@ mapboxgl.accessToken = "pk.eyJ1Ijoiam9yamVyb2phcyIsImEiOiJjbTd2eG42bXYwMTNlMm1vc
 
 // URL directa al producto en LemonSqueezy
 const LEMONSQUEEZY_PRODUCT_URL = "https://travelprint.lemonsqueezy.com/buy/2002abe5-88e1-4541-95f6-8ca287abaa44"
+
+// Colores pastel predefinidos
+const pastelColors = [
+  { name: "Crema", value: "#FFF9E6", textColor: "text-amber-900" },
+  { name: "Rosa", value: "#FFE6E6", textColor: "text-rose-900" },
+  { name: "Menta", value: "#E6FFF2", textColor: "text-emerald-900" },
+  { name: "Lavanda", value: "#F2E6FF", textColor: "text-purple-900" },
+  { name: "Celeste", value: "#E6F2FF", textColor: "text-blue-900" },
+  { name: "Durazno", value: "#FFE9D6", textColor: "text-orange-900" },
+  { name: "Limón", value: "#FFFDE6", textColor: "text-yellow-900" },
+  { name: "Menta Agua", value: "#E6FFFD", textColor: "text-teal-900" },
+  { name: "Blanco", value: "#FFFFFF", textColor: "text-gray-900" },
+]
 
 interface Destination {
   id: string
@@ -54,11 +68,17 @@ const mapStyles = [
 ]
 
 const stampTemplates = [
-  { id: "vintage", name: "Vintage", borderColor: "border-amber-800", bgColor: "bg-amber-100", premium: false },
-  { id: "modern", name: "Moderno", borderColor: "border-slate-800", bgColor: "bg-white", premium: false },
-  { id: "adventure", name: "Aventura", borderColor: "border-emerald-800", bgColor: "bg-emerald-50", premium: true },
-  { id: "night", name: "Nocturno", borderColor: "border-indigo-900", bgColor: "bg-indigo-950", premium: true },
-  { id: "desert", name: "Desierto", borderColor: "border-amber-600", bgColor: "bg-amber-50", premium: true },
+  { id: "vintage", name: "Vintage", borderColor: "border-amber-800", textColor: "text-amber-900", premium: false },
+  { id: "modern", name: "Moderno", borderColor: "border-slate-800", textColor: "text-slate-900", premium: false },
+  {
+    id: "adventure",
+    name: "Aventura",
+    borderColor: "border-emerald-800",
+    textColor: "text-emerald-900",
+    premium: true,
+  },
+  { id: "night", name: "Nocturno", borderColor: "border-indigo-900", textColor: "text-indigo-100", premium: true },
+  { id: "desert", name: "Desierto", borderColor: "border-amber-600", textColor: "text-amber-900", premium: true },
 ]
 
 const stampFormats = [
@@ -120,6 +140,7 @@ export default function TravelStampGenerator() {
   const [remainingDays, setRemainingDays] = useState<number | null>(null)
   const [showExpiryReminder, setShowExpiryReminder] = useState(false)
   const [showActivateModal, setShowActivateModal] = useState(false) // Nuevo estado para el modal de activación
+  const [backgroundColor, setBackgroundColor] = useState(pastelColors[0].value) // Color de fondo predeterminado
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const previewMapRef = useRef<HTMLDivElement>(null)
@@ -644,7 +665,12 @@ export default function TravelStampGenerator() {
 
   const getTemplateClasses = () => {
     const template = stampTemplates.find((t) => t.id === stampTemplate)
-    return `${template?.borderColor} ${template?.bgColor}`
+    return `${template?.borderColor}`
+  }
+
+  const getTemplateTextColor = () => {
+    const template = stampTemplates.find((t) => t.id === stampTemplate)
+    return template?.textColor || "text-amber-900"
   }
 
   const getFormatClasses = () => {
@@ -715,9 +741,14 @@ export default function TravelStampGenerator() {
       setDestinations((prev) => [...prev, newDest])
       setTempMarker(null) // Clear temporary marker
     } catch (error) {
-      console.error("Error en geocodificación inversa:", error)
-      alert("Error al obtener el nombre del lugar. Por favor, intenta de nuevo.")
+      console
+      newDest
+      ])\
+      setTempMarker(null) // Clear temporary marker
     }
+    catch (error)
+    console.error("Error en geocodificación inversa:", error)
+    alert("Error al obtener el nombre del lugar. Por favor, intenta de nuevo.")
   }
 
   // Renderizar el modal de premium
@@ -838,8 +869,6 @@ export default function TravelStampGenerator() {
                       id="destination"
                       value={newDestination}
                       onChange={(e) => setNewDestination(e.target.value)}
-                      placeholder="Ej: Talca, Constitución, Concepción..."
-                      on
                       placeholder="Ej: Talca, Constitución, Concepción..."
                       onKeyDown={(e) => e.key === "Enter" && searchDestination()}
                     />
@@ -1018,6 +1047,26 @@ export default function TravelStampGenerator() {
                       </div>
 
                       <div>
+                        <Label htmlFor="background-color" className="flex items-center">
+                          <Palette className="h-4 w-4 mr-2" />
+                          Color de fondo
+                        </Label>
+                        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-2">
+                          {pastelColors.map((color) => (
+                            <div
+                              key={color.value}
+                              className={`h-8 rounded-md cursor-pointer border-2 ${
+                                backgroundColor === color.value ? "border-amber-600" : "border-transparent"
+                              }`}
+                              style={{ backgroundColor: color.value }}
+                              onClick={() => setBackgroundColor(color.value)}
+                              title={color.name}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
                         <Label htmlFor="trip-name">Nombre del viaje</Label>
                         <Input
                           id="trip-name"
@@ -1148,7 +1197,8 @@ export default function TravelStampGenerator() {
             ) : (
               <div className={getPreviewClasses()} ref={previewContainerRef}>
                 <div
-                  className={`border-2 rounded-lg overflow-hidden ${getTemplateClasses()} ${getFormatClasses()} relative before:absolute before:inset-0 before:bg-[url('/textures/paper-texture.jpg')] before:bg-cover before:opacity-20 before:mix-blend-multiply shadow-xl`}
+                  className={`border-2 rounded-lg overflow-hidden ${getTemplateClasses()} ${getFormatClasses()} relative shadow-xl`}
+                  style={{ backgroundColor: backgroundColor }}
                 >
                   {/* Esquinas decorativas */}
                   <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-amber-800/20 rounded-tl-lg" />
@@ -1159,15 +1209,19 @@ export default function TravelStampGenerator() {
                   {/* Contenido */}
                   <div className="relative z-10 flex flex-col h-full">
                     <div className="p-2 text-center space-y-0.5">
-                      <h3 className="font-serif font-bold text-base tracking-wide text-amber-900">{tripName}</h3>
-                      {tripDate && <p className="text-[10px] text-amber-700 font-medium tracking-wider">{tripDate}</p>}
+                      <h3 className={`font-serif font-bold text-base tracking-wide ${getTemplateTextColor()}`}>
+                        {tripName}
+                      </h3>
+                      {tripDate && (
+                        <p className={`text-[10px] ${getTemplateTextColor()} font-medium tracking-wider`}>{tripDate}</p>
+                      )}
                     </div>
 
                     <div ref={previewMapRef} className={getMapClasses()} />
 
                     <div className="p-2 text-center space-y-1.5 flex-1 flex flex-col justify-end">
                       <div className="inline-block px-2 py-0.5 bg-amber-100/50 rounded-full">
-                        <p className="text-amber-900 text-[10px] font-medium">
+                        <p className={`${getTemplateTextColor()} text-[10px] font-medium`}>
                           <strong>{calculateTotalDistance()}&nbsp;km</strong>&nbsp;recorridos
                         </p>
                       </div>
@@ -1175,9 +1229,17 @@ export default function TravelStampGenerator() {
                       {tripComment && isPremium && (
                         <div className="mt-1 px-3">
                           <div className="relative">
-                            <span className="absolute left-0 top-0 text-amber-800/30 text-base">"</span>
-                            <p className="italic text-[9px] text-amber-800 leading-snug px-4">{tripComment}</p>
-                            <span className="absolute right-0 bottom-0 text-amber-800/30 text-base">"</span>
+                            <span className={`absolute left-0 top-0 ${getTemplateTextColor()} opacity-30 text-base`}>
+                              "
+                            </span>
+                            <p className={`italic text-[9px] ${getTemplateTextColor()} leading-snug px-4`}>
+                              {tripComment}
+                            </p>
+                            <span
+                              className={`absolute right-0 bottom-0 ${getTemplateTextColor()} opacity-30 text-base`}
+                            >
+                              "
+                            </span>
                           </div>
                         </div>
                       )}
@@ -1264,6 +1326,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
