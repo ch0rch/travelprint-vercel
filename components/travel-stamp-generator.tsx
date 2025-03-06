@@ -335,7 +335,7 @@ export default function TravelStampGenerator() {
       destinations.forEach((dest) => {
         new mapboxgl.Marker({
           color: routeColor,
-          scale: 0.7, // Reducir el tamaño del marcador
+          scale: 0.5, // Reducir el tamaño del marcador
         })
           .setLngLat(dest.coordinates)
           .addTo(previewMapRef2.current!)
@@ -818,19 +818,17 @@ export default function TravelStampGenerator() {
                   className={`border-4 rounded-lg overflow-hidden ${getTemplateClasses()} ${getFormatClasses()} relative before:absolute before:inset-0 before:bg-[url('/textures/paper-texture.jpg')] before:bg-cover before:opacity-20 before:mix-blend-multiply shadow-xl`}
                 >
                   {/* Esquinas decorativas */}
-                  <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-amber-800/20 rounded-tl-lg" />
-                  <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-amber-800/20 rounded-tr-lg" />
-                  <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-amber-800/20 rounded-bl-lg" />
-                  <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-amber-800/20 rounded-br-lg" />
+                  <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-amber-800/20 rounded-tl-lg" />
+                  <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-amber-800/20 rounded-tr-lg" />
+                  <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-amber-800/20 rounded-bl-lg" />
+                  <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-amber-800/20 rounded-br-lg" />
 
                   {/* Contenido */}
                   <div className="relative z-10">
-                    <div className="p-3 text-center space-y-1.5">
+                    <div className="p-3 text-center space-y-1">
                       <h3 className="font-serif font-bold text-lg tracking-wide text-amber-900">{tripName}</h3>
                       {tripDate && (
-                        <p className="text-[11px] text-amber-700 mt-0.5 font-medium tracking-wider">
-                          {tripDate}
-                        </p>
+                        <p className="text-[11px] text-amber-700 mt-0.5 font-medium tracking-wider">{tripDate}</p>
                       )}
                     </div>
 
@@ -838,23 +836,18 @@ export default function TravelStampGenerator() {
 
                     <div className="p-3 text-center space-y-2">
                       <div className="inline-block px-3 py-1 bg-amber-100/50 rounded-full">
-                        <p className="text-amber-900 text-sm font-medium">
+                        <p className="text-amber-900 text-xs font-medium">
                           <strong>{calculateTotalDistance()} km</strong> recorridos
                         </p>
                       </div>
-                      </div>
 
-                        km</strong> recorridos
-                        </p>
-                      </div>
+                      <p className="text-[10px] text-amber-800">{destinations.map((d) => d.name).join(" • ")}</p>
 
-                                            {tripComment && tripComment.length > 0 && (
+                      {tripComment && tripComment.length > 0 && (
                         <div className="mt-2">
                           <div className="relative px-6">
                             <span className="absolute left-0 top-0 text-amber-800/30 text-lg">"</span>
-                            <p className="italic text-[11px] text-amber-800 leading-relaxed">
-                              {tripComment}
-                            </p>
+                            <p className="italic text-[10px] text-amber-800 leading-relaxed">{tripComment}</p>
                             <span className="absolute right-0 bottom-0 text-amber-800/30 text-lg">"</span>
                           </div>
                         </div>
@@ -863,45 +856,46 @@ export default function TravelStampGenerator() {
                   </div>
                 </div>
               </div>
-            )
-}
-;<div className="mt-6 space-y-3">
-  <Button
-    className="w-full"
-    variant="outline"
-    disabled={destinations.length < 2 || isDownloading}
-    onClick={downloadFreeStamp}
-  >
-    <Download className="h-4 w-4 mr-2" />
-    {isDownloading ? "Descargando..." : "Descarga gratuita con marca de agua"}
-  </Button>
-  <Button
-    className="w-full bg-gradient-to-r from-amber-500 to-amber-700 hover:from-amber-600 hover:to-amber-800"
-    disabled={destinations.length < 2}
-    onClick={openLemonSqueezyCheckout}
-  >
-    <Crown className="h-4 w-4 mr-2" />
-    Descarga premium ($5)
-  </Button>
-  <div className="mt-2 text-center">
-    <button
-      onClick={refreshPreview}
-      className="text-xs text-amber-600 hover:text-amber-700 flex items-center justify-center mx-auto"
-    >
-      <RefreshCw className="h-3 w-3 mr-1" />
-      Actualizar vista previa
-    </button>
-  </div>
-  <p className="text-xs text-center text-muted-foreground mt-2">
-    La versión premium incluye alta resolución y sin marca de agua
-  </p>
-</div>
-</CardContent>
+            )}
+            <div className="mt-6 space-y-3">
+              <Button
+                className="w-full"
+                variant="outline"
+                disabled={destinations.length < 2 || isDownloading}
+                onClick={downloadFreeStamp}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {isDownloading ? "Descargando..." : "Descarga gratuita con marca de agua"}
+              </Button>
+              <Button
+                className="w-full bg-gradient-to-r from-amber-500 to-amber-700 hover:from-amber-600 hover:to-amber-800"
+                disabled={destinations.length < 2}
+                onClick={openLemonSqueezyCheckout}
+              >
+                <Crown className="h-4 w-4 mr-2" />
+                Descarga premium ($5)
+              </Button>
+              <div className="mt-2 text-center">
+                <button
+                  onClick={refreshPreview}
+                  className="text-xs text-amber-600 hover:text-amber-700 flex items-center justify-center mx-auto"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Actualizar vista previa
+                </button>
+              </div>
+              <p className="text-xs text-center text-muted-foreground mt-2">
+                La versión premium incluye alta resolución y sin marca de agua
+              </p>
+            </div>
+          </CardContent>
         </Card>
       </div>
     </div>
   )
 }
+
+
 
 
 
