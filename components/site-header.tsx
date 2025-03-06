@@ -58,8 +58,14 @@ export function SiteHeader() {
           )}
         </nav>
       </div>
-      {showActivateModal && <ActivatePremiumModal onClose={() => setShowActivateModal(false)} />}
+      {showActivateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <ActivatePremiumModal onClose={() => setShowActivateModal(false)} />
+        </div>
+      )}
     </header>
   )
 }
+
+
 

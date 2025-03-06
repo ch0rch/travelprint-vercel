@@ -47,7 +47,7 @@ export default function ActivatePremiumModal({ onClose }: ActivatePremiumModalPr
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="bg-black/50 absolute inset-0 flex items-center justify-center">
       <Card className="max-w-md w-full">
         <CardContent className="p-6">
           <div className="flex items-start justify-between mb-4">
@@ -114,8 +114,8 @@ export default function ActivatePremiumModal({ onClose }: ActivatePremiumModalPr
                 <h4 className="text-sm font-medium mb-2">¿No encuentras tu clave de licencia?</h4>
                 <p className="text-xs text-muted-foreground">
                   Revisa tu correo electrónico (incluyendo la carpeta de spam) o contacta a soporte en{" "}
-                  <a href="mailto:soporte@travelprint.me" className="text-amber-600 hover:underline">
-                    soporte@travelprint.me
+                  <a href="mailto:hi@travelprint.me" className="text-amber-600 hover:underline">
+                    hi@travelprint.me
                   </a>
                 </p>
               </div>
@@ -126,4 +126,6 @@ export default function ActivatePremiumModal({ onClose }: ActivatePremiumModalPr
     </div>
   )
 }
+
+
 
