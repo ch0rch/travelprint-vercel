@@ -741,9 +741,14 @@ export default function TravelStampGenerator() {
       setDestinations((prev) => [...prev, newDest])
       setTempMarker(null) // Clear temporary marker
     } catch (error) {
-      console.error("Error en geocodificación inversa:", error)
-      alert("Error al obtener el nombre del lugar. Por favor, intenta de nuevo.")
+      console
+      newDest
+      ])\
+      setTempMarker(null) // Clear temporary marker
     }
+    catch (error)
+    console.error("Error en geocodificación inversa:", error)
+    alert("Error al obtener el nombre del lugar. Por favor, intenta de nuevo.")
   }
 
   // Renderizar el modal de premium
@@ -850,11 +855,9 @@ export default function TravelStampGenerator() {
               <div className="mb-4">
                 <h3 className="font-medium mb-2">Destinos ({destinations.length})</h3>
                 <div className="space-y-2 max-h-40 overflow-y-auto p-2 border rounded-md">
-                  {destinations.map(
-                    (dest, index) =>
-                      (
-                        <div key={dest.id} className="flex items-center justify-between bg-white p-2 rounded shadow                    <div key={dest.id} className="flex items-center justify-between bg-white p-2 rounded shadow-sm">
-                      <div className=\"flex items-center">
+                  {destinations.map((dest, index) => (
+                    <div key={dest.id} className="flex items-center justify-between bg-white p-2 rounded shadow-sm">
+                      <div className="flex items-center">
                         <div className="bg-amber-100 text-amber-800 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-xs font-bold">
                           {index + 1}
                         </div>
@@ -864,8 +867,7 @@ export default function TravelStampGenerator() {
                         <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>
                     </div>
-                      ),
-                  )}
+                  ))}
                 </div>
               </div>
             )}
@@ -1246,6 +1248,7 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
 
 
 
