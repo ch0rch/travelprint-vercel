@@ -756,9 +756,7 @@ export default function TravelStampGenerator() {
                   <div>
                     <Label htmlFor="trip-comment">
                       Comentario
-                      <span className="text-xs text-muted-foreground ml-2">
-                        ({tripComment.length}/150 caracteres)
-                      </span>
+                      <span className="text-xs text-muted-foreground ml-2">({tripComment.length}/150 caracteres)</span>
                     </Label>
                     <Textarea
                       id="trip-comment"
@@ -814,7 +812,9 @@ export default function TravelStampGenerator() {
               </div>
             ) : (
               <div className={getPreviewClasses()} ref={previewContainerRef}>
-                <div className={`border-8 rounded-lg overflow-hidden ${getTemplateClasses()} ${getFormatClasses()} relative before:absolute before:inset-0 before:bg-[url('/paper-texture.png')] before:opacity-10 before:pointer-events-none shadow-xl`}>
+                <div
+                  className={`border-8 rounded-lg overflow-hidden ${getTemplateClasses()} ${getFormatClasses()} relative before:absolute before:inset-0 before:bg-[url('/textures/paper-texture.jpg')] before:bg-cover before:opacity-20 before:mix-blend-multiply shadow-xl`}
+                >
                   {/* Esquinas decorativas */}
                   <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-amber-800/20 rounded-tl-lg" />
                   <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-amber-800/20 rounded-tr-lg" />
@@ -825,11 +825,7 @@ export default function TravelStampGenerator() {
                   <div className="relative z-10">
                     <div className="p-4 text-center">
                       <h3 className="font-serif font-bold text-2xl tracking-wide text-amber-900">{tripName}</h3>
-                      {tripDate && (
-                        <p className="text-sm text-amber-700 mt-1 font-medium tracking-wider">
-                          {tripDate}
-                        </p>
-                      )}
+                      {tripDate && <p className="text-sm text-amber-700 mt-1 font-medium tracking-wider">{tripDate}</p>}
                     </div>
 
                     <div ref={previewMapRef} className={getMapClasses()} />
@@ -840,25 +836,23 @@ export default function TravelStampGenerator() {
                           <strong>{calculateTotalDistance()} km</strong> recorridos
                         </p>
                       </div>
-                      </div>
-
-                      <p className="text-xs text-amber-700 mt-3 font-medium">
-                        {destinations.map((d) => d.name).join(" • ")}
-                      </p>                        {destinations.map((d) => d.name).join(" • ")}
-                      </p>
-
-                      {tripComment && (
-                        <div className="mt-4 px-6">
-                          <div className="relative">
-                            <div className="absolute -left-4 top-0 text-amber-800/30 text-xl">"</div>
-                            <p className="italic text-sm text-amber-800 leading-relaxed">
-                              {tripComment}
-                            </p>
-                            <div className="absolute -right-4 bottom-0 text-amber-800/30 text-xl">"</div>
-                          </div>
-                        </div>
-                      )}
                     </div>
+
+                    <p className="text-xs text-amber-700 mt-3">
+                      {destinations.map((d) => d.name).join(" • ")}
+                      mt-3">
+                      {destinations.map((d) => d.name).join(" • ")}
+                    </p>
+
+                    {tripComment && (
+                      <div className="mt-4 px-6">
+                        <div className="relative">
+                          <div className="absolute -left-4 top-0 text-amber-800/30 text-xl">"</div>
+                          <p className="italic text-sm text-amber-800 leading-relaxed">{tripComment}</p>
+                          <div className="absolute -right-4 bottom-0 text-amber-800/30 text-xl">"</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -896,10 +890,12 @@ export default function TravelStampGenerator() {
             </div>
           </CardContent>
         </Card>
-  </div>
+      </div>
     </div>
   )
 }
+
+
 
 
 
