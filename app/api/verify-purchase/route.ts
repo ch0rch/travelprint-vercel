@@ -63,3 +63,16 @@ export async function POST(request: Request) {
   }
 }
 
+export function verifyToken(token: string): boolean {
+  // This is a placeholder.  Actual token verification logic would go here.
+  //  This example assumes the token is a simple string representation of a timestamp.
+  try {
+    const timestamp = Number.parseInt(token, 10)
+    return timestamp > Date.now() - 90 * 24 * 60 * 60 * 1000 // 90 days
+  } catch (error) {
+    return false
+  }
+}
+
+
+

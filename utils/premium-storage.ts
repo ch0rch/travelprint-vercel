@@ -21,22 +21,31 @@ export function savePremiumStatus(orderId: string): void {
   localStorage.setItem(EXPIRY_DATE_KEY, expiryDate.toString())
 }
 
-// Verificar si el usuario es premium y si no ha expirado
+// Función para verificar si el usuario es premium
 export function isPremiumUser(): boolean {
-  if (!isBrowser) return false
-
-  const isPremium = localStorage.getItem(PREMIUM_KEY) === "true"
-  if (!isPremium) return false
-
-  // Verificar si ha expirado
-  const expiryDateStr = localStorage.getItem(EXPIRY_DATE_KEY)
-  if (!expiryDateStr) return false
-
-  const expiryDate = Number.parseInt(expiryDateStr, 10)
-  const now = Date.now()
-
-  return now < expiryDate
-}
+    if (typeof window === "undefined") return false
+  
+    try {
+      const isPremium = localStorage.getItem(PREMIUM_KEY) === "true"
+  
+      // Verificar si ha expirado
+      if (isPremium) {
+        const expiryDate = getExpiryDate()
+        if (expiryDate && expiryDate < new Date()) {
+          // Ha expirado, limpiar el estado premium
+          localStorage.removeItem(PREMIUM_KEY)
+          localStorage.removeItem(ORDER_ID_KEY)
+          localStorage.removeItem(EXPIRY_DATE_KEY)
+          return false
+        }
+      }
+  
+      return isPremium
+    } catch (error) {
+      console.error("Error al verificar estado premium:", error)
+      return false
+    }
+  }
 
 // Obtener el ID de orden
 export function getOrderId(): string | null {
@@ -44,29 +53,30 @@ export function getOrderId(): string | null {
   return localStorage.getItem(ORDER_ID_KEY)
 }
 
-// Obtener la fecha de expiración
+// Función para obtener la fecha de expiración
 export function getExpiryDate(): Date | null {
-  if (!isBrowser) return null
+    if (typeof window === "undefined") return null
+  
+    try {
+      const expiryDateStr = localStorage.getItem(EXPIRY_DATE_KEY)
+      return expiryDateStr ? new Date(Number.parseInt(expiryDateStr, 10)) : null
+    } catch (error) {
+      console.error("Error al obtener fecha de expiración:", error)
+      return null
+    }
+  }
 
-  const expiryDateStr = localStorage.getItem(EXPIRY_DATE_KEY)
-  if (!expiryDateStr) return null
-
-  return new Date(Number.parseInt(expiryDateStr, 10))
-}
-
-// Obtener días restantes de la suscripción
+// Función para calcular los días restantes
 export function getRemainingDays(): number | null {
-  if (!isBrowser) return null
-
-  const expiryDate = getExpiryDate()
-  if (!expiryDate) return null
-
-  const now = new Date()
-  const diffTime = expiryDate.getTime() - now.getTime()
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-  return diffDays > 0 ? diffDays : 0
-}
+    const expiryDate = getExpiryDate()
+    if (!expiryDate) return null
+  
+    const now = new Date()
+    const diffTime = expiryDate.getTime() - now.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  
+    return diffDays > 0 ? diffDays : 0
+  }
 
 // Limpiar estado premium (por si necesitas una función de logout)
 export function clearPremiumStatus(): void {
@@ -104,4 +114,5 @@ export async function verifyAndSavePremiumStatus(orderId: string): Promise<boole
       return false
     }
   }
+  
 

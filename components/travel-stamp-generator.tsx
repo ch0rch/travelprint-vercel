@@ -186,14 +186,34 @@ export default function TravelStampGenerator() {
 
   // Inicializar LemonSqueezy
   useEffect(() => {
+    // Verificar si el script ya está cargado
+    if (document.querySelector('script[src="https://app.lemonsqueezy.com/js/checkout.js"]')) {
+      return
+    }
+
     // Cargar el script de LemonSqueezy
     const script = document.createElement("script")
     script.src = "https://app.lemonsqueezy.com/js/checkout.js"
     script.async = true
+    script.defer = true
+
+    // Añadir un evento para saber cuando el script está cargado
+    script.onload = () => {
+      console.log("LemonSqueezy script loaded successfully")
+    }
+
+    script.onerror = () => {
+      console.error("Failed to load LemonSqueezy script")
+    }
+
     document.body.appendChild(script)
 
     return () => {
-      document.body.removeChild(script)
+      // Solo eliminar si existe
+      const scriptElement = document.querySelector('script[src="https://app.lemonsqueezy.com/js/checkout.js"]')
+      if (scriptElement && scriptElement.parentNode) {
+        scriptElement.parentNode.removeChild(scriptElement)
+      }
     }
   }, [])
 
@@ -578,47 +598,62 @@ export default function TravelStampGenerator() {
     // Generar un ID único para esta compra
     const purchaseId = Date.now().toString()
 
-    // @ts-ignore - LemonSqueezy se carga mediante script externo
-    if (window.createLemonSqueezy) {
-      // @ts-ignore
-      window
-        .createLemonSqueezy()
-        .Setup({
-          eventCallback: async (event: any) => {
-            if (event.event === "Checkout.Success") {
-              // Guardar el estado premium y el ID de orden
-              const orderId = event.data?.order?.identifier || purchaseId
+    // Verificar si LemonSqueezy está disponible
+    if (typeof window !== "undefined" && typeof window.createLemonSqueezy === "function") {
+      try {
+        window
+          .createLemonSqueezy()
+          .Setup({
+            eventCallback: async (event: any) => {
+              if (event.event === "Checkout.Success") {
+                // Guardar el estado premium y el ID de orden
+                const orderId = event.data?.order?.identifier || purchaseId
 
-              // Verificar la compra en el servidor
-              const verified = await verifyAndSavePremiumStatus(orderId)
+                // Verificar la compra en el servidor
+                const verified = await verifyAndSavePremiumStatus(orderId)
 
-              if (verified) {
-                // Actualizar el estado
-                setIsPremium(true)
-                setExpiryDate(getExpiryDate())
-                setRemainingDays(getRemainingDays())
+                if (verified) {
+                  // Actualizar el estado
+                  setIsPremium(true)
+                  setExpiryDate(getExpiryDate())
+                  setRemainingDays(getRemainingDays())
 
-                // Generar y descargar la imagen premium
-                generatePremiumStamp()
-              } else {
-                alert("No se pudo verificar tu compra. Por favor, contacta a soporte.")
+                  // Generar y descargar la imagen premium
+                  generatePremiumStamp()
+                } else {
+                  alert("No se pudo verificar tu compra. Por favor, contacta a soporte.")
+                }
               }
-            }
-          },
-        })
-        .Checkout.open({
-          product: {
-            id: LEMONSQUEEZY_PRODUCT_ID,
-          },
-          custom: {
-            purchase_id: purchaseId,
-            trip_name: tripName,
-            destinations: destinations.map((d) => d.name).join(", "),
-            is_renewal: isPremium ? "true" : "false",
-          },
-        })
+            },
+          })
+          .Checkout.open({
+            product: {
+              id: LEMONSQUEEZY_PRODUCT_ID,
+            },
+            custom: {
+              purchase_id: purchaseId,
+              trip_name: tripName,
+              destinations: destinations.map((d) => d.name).join(", "),
+              is_renewal: isPremium ? "true" : "false",
+            },
+          })
+      } catch (error) {
+        console.error("Error al abrir el checkout de LemonSqueezy:", error)
+        alert("Error al abrir el checkout. Por favor, intenta de nuevo más tarde o contacta a soporte.")
+      }
     } else {
-      alert("Error al cargar el checkout. Por favor, intenta de nuevo más tarde.")
+      console.error("LemonSqueezy script not loaded or not available")
+
+      // Intentar cargar el script de nuevo
+      const script = document.createElement("script")
+      script.src = "https://app.lemonsqueezy.com/js/checkout.js"
+      script.async = true
+      script.onload = () => {
+        alert("Por favor, intenta de nuevo hacer clic en el botón de compra.")
+      }
+      document.body.appendChild(script)
+
+      alert("No se pudo cargar el sistema de pago. Por favor, espera un momento e intenta de nuevo.")
     }
   }
 
@@ -1236,6 +1271,7 @@ export default function TravelStampGenerator() {
           </CardContent>
         </Card>
       </div>
+
       {renderPremiumModal()}
       {isPremium && showExpiryReminder && (
         <ExpiryReminderModal onRenew={openLemonSqueezyCheckout} onClose={() => setShowExpiryReminder(false)} />
@@ -1243,6 +1279,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
