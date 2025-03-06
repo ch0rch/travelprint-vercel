@@ -99,6 +99,7 @@ export default function TravelStampGenerator() {
   const [tripDate, setTripDate] = useState("")
   const [tripComment, setTripComment] = useState("")
   const [isDownloading, setIsDownloading] = useState(false)
+  const [tempMarker, setTempMarker] = useState<mapboxgl.Marker | null>(null)
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const previewMapRef = useRef<HTMLDivElement>(null)
@@ -119,7 +120,11 @@ export default function TravelStampGenerator() {
 
     mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right")
 
+    // Add click handler
+    mapRef.current.on("click", handleMapClick)
+
     return () => {
+      mapRef.current?.off("click", handleMapClick)
       mapRef.current?.remove()
     }
   }, [mapStyle])
@@ -596,28 +601,76 @@ export default function TravelStampGenerator() {
     }
   }
 
+  // Handle map clicks
+  const handleMapClick = async (e: mapboxgl.MapMouseEvent) => {
+    if (!mapRef.current) return
+
+    // Remove previous temporary marker if it exists
+    if (tempMarker) {
+      tempMarker.remove()
+    }
+
+    // Add a temporary marker
+    const marker = new mapboxgl.Marker({
+      color: routeColor,
+      draggable: true, // Allow fine-tuning of position
+    })
+      .setLngLat(e.lngLat)
+      .addTo(mapRef.current)
+
+    setTempMarker(marker)
+
+    try {
+      // Reverse geocoding using Mapbox API
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${e.lngLat.lng},${e.lngLat.lat}.json?access_token=${mapboxgl.accessToken}&language=es`,
+      )
+      const data = await response.json()
+
+      // Get the most relevant place name
+      const placeName = data.features[0]?.place_name || "Ubicación desconocida"
+
+      // Add the new destination
+      const newDest: Destination = {
+        id: Date.now().toString(),
+        name: placeName.split(",")[0], // Take just the first part of the place name
+        coordinates: [e.lngLat.lng, e.lngLat.lat],
+      }
+
+      setDestinations((prev) => [...prev, newDest])
+      setTempMarker(null) // Clear temporary marker
+    } catch (error) {
+      console.error("Error en geocodificación inversa:", error)
+      alert("Error al obtener el nombre del lugar. Por favor, intenta de nuevo.")
+    }
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-6">
         <Card>
           <CardContent className="p-6">
-            <h2>Generador de Estampitas</h2>
-            <p>Versión simplificada para depuración</p>
+            <h2 className="text-xl font-bold mb-4">Generador de Estampitas</h2>
             <div className="flex flex-col md:flex-row gap-4 mb-4">
               <div className="flex-1">
                 <Label htmlFor="destination">Añadir destino</Label>
-                <div className="flex gap-2 mt-1">
-                  <Input
-                    id="destination"
-                    value={newDestination}
-                    onChange={(e) => setNewDestination(e.target.value)}
-                    placeholder="Ej: Talca, Constitución, Concepción..."
-                    onKeyDown={(e) => e.key === "Enter" && searchDestination()}
-                  />
-                  <Button onClick={searchDestination} disabled={isSearching || !newDestination.trim()}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    Añadir
-                  </Button>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      id="destination"
+                      value={newDestination}
+                      onChange={(e) => setNewDestination(e.target.value)}
+                      placeholder="Ej: Talca, Constitución, Concepción..."
+                      onKeyDown={(e) => e.key === "Enter" && searchDestination()}
+                    />
+                    <Button onClick={searchDestination} disabled={isSearching || !newDestination.trim()}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Añadir
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    También puedes hacer clic en el mapa para añadir destinos de forma precisa
+                  </p>
                 </div>
               </div>
             </div>
@@ -895,6 +948,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
