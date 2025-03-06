@@ -741,14 +741,9 @@ export default function TravelStampGenerator() {
       setDestinations((prev) => [...prev, newDest])
       setTempMarker(null) // Clear temporary marker
     } catch (error) {
-      console
-      newDest
-      ])\
-      setTempMarker(null) // Clear temporary marker
+      console.error("Error en geocodificación inversa:", error)
+      alert("Error al obtener el nombre del lugar. Por favor, intenta de nuevo.")
     }
-    catch (error)
-    console.error("Error en geocodificación inversa:", error)
-    alert("Error al obtener el nombre del lugar. Por favor, intenta de nuevo.")
   }
 
   // Renderizar el modal de premium
@@ -1248,6 +1243,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
