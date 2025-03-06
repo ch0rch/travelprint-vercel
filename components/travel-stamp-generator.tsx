@@ -8,21 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  MapPin,
-  Plus,
-  Download,
-  Trash2,
-  Smartphone,
-  Square,
-  ImageIcon,
-  MonitorSmartphone,
-  Crown,
-  RefreshCw,
-  Lock,
-  Sparkles,
-  Palette,
-} from "lucide-react"
+import { MapPin, Plus, Download, Trash2, Smartphone, Square, ImageIcon, MonitorSmartphone, Crown, RefreshCw, Lock, Sparkles, Palette } from 'lucide-react'
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import html2canvas from "html2canvas"
@@ -833,8 +819,8 @@ export default function TravelStampGenerator() {
               <div className="flex-1">
                 <Label htmlFor="destination">Añadir destino</Label>
                 <div className="space-y-2">
-                <Label htmlFor="destination">Añadir destino</Label>
-                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <                <div className="space-y-2">
                   <div className="flex gap-2">
                     <Input
                       id="destination"
