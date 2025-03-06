@@ -27,7 +27,7 @@ import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import html2canvas from "html2canvas"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { isPremiumUser, getExpiryDate, getRemainingDays } from "@/utils/premium-storage"
+import { isPremiumUser, getExpiryDate, getRemainingDays, verifyAndSavePremiumStatus } from "@/utils/premium-storage"
 import PremiumBadge from "@/components/premium-badge"
 import ExpiryReminderModal from "@/components/expiry-reminder-modal"
 
@@ -792,17 +792,92 @@ export default function TravelStampGenerator() {
     // Generar un ID único para esta compra
     const purchaseId = Date.now().toString()
 
-    // URL directa a tu producto en LemonSqueezy
-    // Reemplaza "yourstore" con el nombre de tu tienda
-    const lemonSqueezyUrl = `https://yourstore.lemonsqueezy.com/checkout/buy/${LEMONSQUEEZY_PRODUCT_ID}?checkout[custom][purchase_id]=${purchaseId}&checkout[custom][trip_name]=${encodeURIComponent(tripName)}&checkout[custom][is_renewal]=${isPremium ? "true" : "false"}`
+    // Verificar si el script de LemonSqueezy ya está cargado
+    if (typeof window !== "undefined" && typeof window.createLemonSqueezy === "function") {
+      try {
+        window
+          .createLemonSqueezy()
+          .Setup({
+            eventCallback: async (event: any) => {
+              if (event.event === "Checkout.Success") {
+                // Guardar el estado premium y el ID de orden
+                const orderId = event.data?.order?.identifier || purchaseId
 
-    // Abrir en una nueva pestaña
-    window.open(lemonSqueezyUrl, "_blank")
+                // Verificar la compra en el servidor
+                const verified = await verifyAndSavePremiumStatus(orderId)
 
-    // Mostrar instrucciones al usuario
-    alert(
-      "Se ha abierto la página de pago en una nueva pestaña. Después de completar tu compra, vuelve a esta página y actualiza para activar tus beneficios premium.",
+                if (verified) {
+                  // Actualizar el estado
+                  setIsPremium(true)
+                  setExpiryDate(getExpiryDate())
+                  setRemainingDays(getRemainingDays())
+
+                  // Generar y descargar la imagen premium
+                  generatePremiumStamp()
+                } else {
+                  alert("No se pudo verificar tu compra. Por favor, contacta a soporte.")
+                }
+              }
+            },
+          })
+          .Checkout.open({
+            product: {
+              id: LEMONSQUEEZY_PRODUCT_ID,
+            },
+            custom: {
+              purchase_id: purchaseId,
+              trip_name: tripName,
+              destinations: destinations.map((d) => d.name).join(", "),
+              is_renewal: isPremium ? "true" : "false",
+            },
+          })
+      } catch (error) {
+        console.error("Error al abrir el checkout de LemonSqueezy:", error)
+        // Si falla, redirigir a la URL directa
+        redirectToLemonSqueezyStore()
+      }
+    } else {
+      console.log("LemonSqueezy script not loaded, trying to load it now...")
+
+      // Intentar cargar el script de nuevo
+      const script = document.createElement("script")
+      script.src = "https://app.lemonsqueezy.com/js/checkout.js"
+      script.async = true
+
+      script.onload = () => {
+        console.log("LemonSqueezy script loaded successfully, opening checkout...")
+        // Esperar un momento para asegurarse de que el script esté inicializado
+        setTimeout(() => {
+          if (typeof window.createLemonSqueezy === "function") {
+            openLemonSqueezyCheckout() // Llamar a la función de nuevo ahora que el script está cargado
+          } else {
+            console.error("LemonSqueezy script loaded but createLemonSqueezy is not available")
+            redirectToLemonSqueezyStore()
+          }
+        }, 500)
+      }
+
+      script.onerror = () => {
+        console.error("Failed to load LemonSqueezy script")
+        redirectToLemonSqueezyStore()
+      }
+
+      document.body.appendChild(script)
+    }
+  }
+
+  // Añade esta nueva función para redirección directa
+  const redirectToLemonSqueezyStore = () => {
+    const confirmed = window.confirm(
+      "No se pudo cargar el sistema de pago integrado. ¿Quieres ir directamente a la página de compra?",
     )
+
+    if (confirmed) {
+      // URL directa a tu producto en LemonSqueezy
+      const lemonSqueezyUrl = `https://yourstore.lemonsqueezy.com/checkout/buy/${LEMONSQUEEZY_PRODUCT_ID}?checkout[custom][purchase_id]=${Date.now()}&checkout[custom][trip_name]=${encodeURIComponent(tripName)}&checkout[custom][is_renewal]=${isPremium ? "true" : "false"}`
+
+      window.open(lemonSqueezyUrl, "_blank")
+    }
   }
 
   return (
@@ -839,12 +914,9 @@ export default function TravelStampGenerator() {
               <div className="mb-4">
                 <h3 className="font-medium mb-2">Destinos ({destinations.length})</h3>
                 <div className="space-y-2 max-h-40 overflow-y-auto p-2 border rounded-md">
-                  {destinations.map(
-                    (dest, index) =>
-                      (
-                        <div key={dest.id} className="                  {destinations.map((dest, index) => (
+                  {destinations.map((dest, index) => (
                     <div key={dest.id} className="flex items-center justify-between bg-white p-2 rounded shadow-sm">
-                      <div className="flex items-center">\
+                      <div className="flex items-center">
                         <div className="bg-amber-100 text-amber-800 w-6 h-6 rounded-full flex items-center justify-center mr-2 text-xs font-bold">
                           {index + 1}
                         </div>
@@ -854,8 +926,7 @@ export default function TravelStampGenerator() {
                         <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>
                     </div>
-                      ),
-                  )}
+                  ))}
                 </div>
               </div>
             )}
@@ -1237,6 +1308,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
