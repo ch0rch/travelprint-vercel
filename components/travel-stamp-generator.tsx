@@ -9,7 +9,18 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
-import { MapPin, Plus, Download, Trash2, Smartphone, Square, ImageIcon, MonitorSmartphone, Crown, RefreshCw } from 'lucide-react'
+import {
+  MapPin,
+  Plus,
+  Download,
+  Trash2,
+  Smartphone,
+  Square,
+  ImageIcon,
+  MonitorSmartphone,
+  Crown,
+  RefreshCw,
+} from "lucide-react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import html2canvas from "html2canvas"
@@ -817,9 +828,7 @@ export default function TravelStampGenerator() {
                     <div className="p-3 text-center">
                       <h3 className="font-serif font-bold text-xl tracking-wide text-amber-900">{tripName}</h3>
                       {tripDate && (
-                        <p className="text-xs text-amber-700 mt-0.5 font-medium tracking-wider">
-                          {tripDate}
-                        </p>
+                        <p className="text-xs text-amber-700 mt-0.5 font-medium tracking-wider">{tripDate}</p>
                       )}
                     </div>
 
@@ -832,17 +841,13 @@ export default function TravelStampGenerator() {
                         </p>
                       </div>
 
-                      <p className="text-xs text-                        </p>
-
-                      </p>
+                      <p className="text-xs text-amber-800">{destinations.map((d) => d.name).join(" • ")}</p>
 
                       {tripComment && (
                         <div className="mt-2 px-4">
                           <div className="relative">
                             <div className="absolute -left-3 top-0 text-amber-800/30 text-base">"</div>
-                            <p className="italic text-xs text-amber-800 leading-relaxed px-4">
-                              {tripComment}
-                            </p>
+                            <p className="italic text-xs text-amber-800 leading-relaxed px-4">{tripComment}</p>
                             <div className="absolute -right-3 bottom-0 text-amber-800/30 text-base">"</div>
                           </div>
                         </div>
@@ -889,6 +894,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
