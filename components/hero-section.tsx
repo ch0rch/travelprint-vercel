@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button"
 import { Crown, MapPin } from "lucide-react"
 import Link from "next/link"
 
+// Rutas codificadas en formato polyline para Mapbox
 const exampleRoutes = [
   {
     id: 1,
@@ -9,8 +10,9 @@ const exampleRoutes = [
     description: "Recorriendo los lagos del sur de Chile, desde Pucón hasta Puerto Varas",
     distance: "320 km",
     locations: ["Pucón", "Villarrica", "Puerto Varas"],
+    // Mapa con marcadores más grandes y línea que conecta los puntos
     image:
-      "https://api.mapbox.com/styles/v1/mapbox/light-v11/static/pin-s+e05d37(-71.954,-39.272),pin-s+e05d37(-72.228,-39.536),pin-s+e05d37(-72.983,-41.319)/-72.2,-40.2,7/400x300@2x?access_token=pk.eyJ1Ijoiam9yamVyb2phcyIsImEiOiJjbTd2eG42bXYwMTNlMm1vcWRycWpicmRhIn0.hDwomrUtCTWGe0gtLHil2Q",
+      "https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/path-5+e05d37-0.8(%7DrpFbgiiMl%40jy%40xdAruBvcE)/pin-l+e05d37(-71.954,-39.272),pin-l+e05d37(-72.228,-39.536),pin-l+e05d37(-72.983,-41.319)/-72.2,-40.2,6.5/500x300@2x?access_token=pk.eyJ1Ijoiam9yamVyb2phcyIsImEiOiJjbTd2eG42bXYwMTNlMm1vcWRycWpicmRhIn0.hDwomrUtCTWGe0gtLHil2Q",
   },
   {
     id: 2,
@@ -18,8 +20,9 @@ const exampleRoutes = [
     description: "Un viaje por los valles vinícolas desde Casablanca hasta Santa Cruz",
     distance: "245 km",
     locations: ["Casablanca", "San Fernando", "Santa Cruz"],
+    // Mapa con marcadores más grandes y línea que conecta los puntos
     image:
-      "https://api.mapbox.com/styles/v1/mapbox/light-v11/static/pin-s+e05d37(-71.409,-33.319),pin-s+e05d37(-70.987,-34.583),pin-s+e05d37(-71.365,-34.639)/-71.2,-34,7/400x300@2x?access_token=pk.eyJ1Ijoiam9yamVyb2phcyIsImEiOiJjbTd2eG42bXYwMTNlMm1vcWRycWpicmRhIn0.hDwomrUtCTWGe0gtLHil2Q",
+      "https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/path-5+e05d37-0.8(ynrFhvfkMtcBnuDfgA%7CqC)/pin-l+e05d37(-71.409,-33.319),pin-l+e05d37(-70.987,-34.583),pin-l+e05d37(-71.365,-34.639)/-71.2,-34,7/500x300@2x?access_token=pk.eyJ1Ijoiam9yamVyb2phcyIsImEiOiJjbTd2eG42bXYwMTNlMm1vcWRycWpicmRhIn0.hDwomrUtCTWGe0gtLHil2Q",
   },
 ]
 
@@ -84,6 +87,11 @@ export function HeroSection() {
                       {route.distance}
                     </div>
                   </div>
+
+                  {/* Overlay para explicar el producto */}
+                  <div className="absolute top-2 right-2 bg-white/90 rounded px-2 py-1 text-xs text-amber-800 font-medium border border-amber-200">
+                    Ruta personalizada
+                  </div>
                 </div>
                 <div className="p-4">
                   <h3 className="font-medium text-amber-900 text-lg mb-2">{route.title}</h3>
@@ -102,11 +110,18 @@ export function HeroSection() {
               </div>
             ))}
           </div>
+
+          <p className="text-amber-700 text-sm mt-6 max-w-lg mx-auto">
+            Selecciona tus destinos, personaliza el estilo y descarga tu estampita para compartir tus aventuras con el
+            mundo.
+          </p>
         </div>
       </div>
     </div>
   )
 }
+
+
 
 
 
