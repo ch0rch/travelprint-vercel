@@ -3,6 +3,46 @@ const PREMIUM_KEY = "premiumStatus"
 const ORDER_ID_KEY = "orderId"
 const EXPIRY_DATE_KEY = "expiryDate"
 
+// Modificar la función verifyAndSavePremiumStatus para que acepte un orderId o un código de licencia
+export async function verifyAndSavePremiumStatus(orderIdOrLicense: string): Promise<boolean> {
+    try {
+      const response = await fetch("/api/verify-purchase", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderId: orderIdOrLicense,
+          // Añadir el timestamp actual para evitar problemas de caché
+          timestamp: Date.now(),
+        }),
+      })
+  
+      if (!response.ok) {
+        console.error("Error response from server:", await response.text())
+        return false
+      }
+  
+      const data = await response.json()
+  
+      if (data.success) {
+        // Guardar con la fecha de expiración proporcionada por el servidor
+        localStorage.setItem(PREMIUM_KEY, "true")
+        localStorage.setItem(ORDER_ID_KEY, orderIdOrLicense)
+        localStorage.setItem(EXPIRY_DATE_KEY, data.expiryDate.toString())
+  
+        // Forzar una recarga de la página para actualizar la UI
+        window.location.reload()
+        return true
+      }
+  
+      return false
+    } catch (error) {
+      console.error("Error verifying purchase:", error)
+      return false
+    }
+  }
+
 // Duración de la suscripción premium en milisegundos (3 meses)
 const PREMIUM_DURATION = 1000 * 60 * 60 * 24 * 90 // 90 días
 
@@ -114,5 +154,28 @@ export async function verifyAndSavePremiumStatus(orderId: string): Promise<boole
       return false
     }
   }
+
+  // Añadir una función para verificar el estado de la compra por URL
+export function checkPurchaseFromURL(): void {
+    if (typeof window === "undefined") return
+  
+    try {
+      // Verificar si hay parámetros de compra en la URL
+      const urlParams = new URLSearchParams(window.location.search)
+      const orderId = urlParams.get("order_id")
+      const licenseKey = urlParams.get("license_key")
+  
+      if (orderId || licenseKey) {
+        // Limpiar la URL para evitar verificaciones duplicadas
+        window.history.replaceState({}, document.title, window.location.pathname)
+  
+        // Verificar la compra
+        verifyAndSavePremiumStatus(orderId || licenseKey || "")
+      }
+    } catch (error) {
+      console.error("Error checking purchase from URL:", error)
+    }
+  }
+  
   
 

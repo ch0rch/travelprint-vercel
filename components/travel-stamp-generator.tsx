@@ -27,7 +27,7 @@ import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import html2canvas from "html2canvas"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { isPremiumUser, getExpiryDate, getRemainingDays } from "@/utils/premium-storage"
+import { isPremiumUser, getExpiryDate, getRemainingDays, checkPurchaseFromURL } from "@/utils/premium-storage"
 import PremiumBadge from "@/components/premium-badge"
 import ExpiryReminderModal from "@/components/expiry-reminder-modal"
 
@@ -793,11 +793,15 @@ export default function TravelStampGenerator() {
     // Generar un ID único para esta compra
     const purchaseId = Date.now().toString()
 
+    // Construir la URL de retorno a la aplicación
+    const returnUrl = typeof window !== "undefined" ? `${window.location.origin}?order_id={order_id}` : ""
+
     // Construir la URL con los parámetros personalizados
     const customParams = new URLSearchParams({
       "checkout[custom][purchase_id]": purchaseId,
       "checkout[custom][trip_name]": tripName,
       "checkout[custom][is_renewal]": isPremium ? "true" : "false",
+      "checkout[redirect_url]": returnUrl,
     })
 
     // URL completa
@@ -808,9 +812,14 @@ export default function TravelStampGenerator() {
 
     // Mostrar instrucciones al usuario
     alert(
-      "Se ha abierto la página de pago en una nueva pestaña. Después de completar tu compra, vuelve a esta página y actualiza para activar tus beneficios premium.",
+      "Se ha abierto la página de pago en una nueva pestaña. Después de completar tu compra, serás redirigido automáticamente a esta página.",
     )
   }
+
+  useEffect(() => {
+    // Verificar si hay parámetros de compra en la URL
+    checkPurchaseFromURL()
+  }, [])
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1240,6 +1249,7 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
 
 
 

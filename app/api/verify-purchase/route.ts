@@ -12,6 +12,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "Order ID is required" }, { status: 400 })
     }
 
+    if (!LEMONSQUEEZY_API_KEY) {
+      console.error("LEMONSQUEEZY_API_KEY is not defined")
+      return NextResponse.json(
+        {
+          success: false,
+          message: "API key not configured",
+        },
+        { status: 500 },
+      )
+    }
+
+    console.log(`Verifying order: ${orderId}`)
+
     // Verificar la compra con la API de LemonSqueezy
     const response = await fetch(`https://api.lemonsqueezy.com/v1/orders/${orderId}`, {
       headers: {
@@ -22,24 +35,38 @@ export async function POST(request: Request) {
     })
 
     if (!response.ok) {
+      console.error(`LemonSqueezy API error: ${response.status} ${response.statusText}`)
+      const errorText = await response.text()
+      console.error(`Error response: ${errorText}`)
+
       return NextResponse.json(
         {
           success: false,
           message: "Failed to verify purchase",
+          error: `${response.status} ${response.statusText}`,
         },
         { status: 500 },
       )
     }
 
     const data = await response.json()
+    console.log("LemonSqueezy response:", JSON.stringify(data, null, 2))
 
     // Verificar que la orden pertenece a tu tienda y está pagada
     const order = data.data
-    if (order.attributes.store_id.toString() !== LEMONSQUEEZY_STORE_ID || order.attributes.status !== "paid") {
+    if (
+      !order ||
+      (LEMONSQUEEZY_STORE_ID && order.attributes.store_id.toString() !== LEMONSQUEEZY_STORE_ID) ||
+      order.attributes.status !== "paid"
+    ) {
       return NextResponse.json(
         {
           success: false,
           message: "Invalid or unpaid order",
+          details: {
+            storeMatch: !LEMONSQUEEZY_STORE_ID || order.attributes.store_id.toString() === LEMONSQUEEZY_STORE_ID,
+            status: order.attributes.status,
+          },
         },
         { status: 403 },
       )
@@ -57,6 +84,7 @@ export async function POST(request: Request) {
       {
         success: false,
         message: "Server error",
+        error: error instanceof Error ? error.message : String(error),
       },
       { status: 500 },
     )
@@ -64,8 +92,8 @@ export async function POST(request: Request) {
 }
 
 export function verifyToken(token: string): boolean {
-  // This is a placeholder.  Actual token verification logic would go here.
-  //  This example assumes the token is a simple string representation of a timestamp.
+  // This is a placeholder. Actual token verification logic would go here.
+  // This example assumes the token is a simple string representation of a timestamp.
   try {
     const timestamp = Number.parseInt(token, 10)
     return timestamp > Date.now() - 90 * 24 * 60 * 60 * 1000 // 90 days
@@ -73,6 +101,8 @@ export function verifyToken(token: string): boolean {
     return false
   }
 }
+
+
 
 
 
