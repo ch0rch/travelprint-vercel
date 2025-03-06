@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Crown, AlertCircle } from "lucide-react"
@@ -12,8 +12,13 @@ interface ExpiryReminderModalProps {
 }
 
 export default function ExpiryReminderModal({ onRenew, onClose }: ExpiryReminderModalProps) {
-  const [remainingDays, setRemainingDays] = useState<number | null>(getRemainingDays())
-  const [expiryDate, setExpiryDate] = useState<Date | null>(getExpiryDate())
+  const [remainingDays, setRemainingDays] = useState<number | null>(null)
+  const [expiryDate, setExpiryDate] = useState<Date | null>(null)
+
+  useEffect(() => {
+    setRemainingDays(getRemainingDays())
+    setExpiryDate(getExpiryDate())
+  }, [])
 
   if (!remainingDays || !expiryDate || remainingDays > 7) return null
 
@@ -86,4 +91,5 @@ export default function ExpiryReminderModal({ onRenew, onClose }: ExpiryReminder
     </div>
   )
 }
+
 

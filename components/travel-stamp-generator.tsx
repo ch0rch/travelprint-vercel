@@ -113,10 +113,7 @@ export default function TravelStampGenerator() {
   const [tripComment, setTripComment] = useState("")
   const [isDownloading, setIsDownloading] = useState(false)
   const [tempMarker, setTempMarker] = useState<mapboxgl.Marker | null>(null)
-  const [isPremium, setIsPremium] = useState<boolean>(() => {
-    // Verificar el estado premium al cargar el componente
-    return isPremiumUser()
-  })
+  const [isPremium, setIsPremium] = useState<boolean>(false) // Inicializar como false por defecto
   const [showPremiumModal, setShowPremiumModal] = useState(false)
   const [expiryDate, setExpiryDate] = useState<Date | null>(null)
   const [remainingDays, setRemainingDays] = useState<number | null>(null)
@@ -127,6 +124,11 @@ export default function TravelStampGenerator() {
   const previewContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const previewMapRef2 = useRef<mapboxgl.Map | null>(null)
+
+  // Verificar el estado premium en el cliente
+  useEffect(() => {
+    setIsPremium(isPremiumUser())
+  }, [])
 
   // Inicializar el mapa principal
   useEffect(() => {
@@ -270,18 +272,21 @@ export default function TravelStampGenerator() {
   useEffect(() => {
     if (isPremium && remainingDays !== null && remainingDays <= 7) {
       // Verificar si ya se mostró el recordatorio hoy
-      const lastReminder = localStorage.getItem("rv_last_reminder")
-      const today = new Date().toDateString()
+      const isBrowser = typeof window !== "undefined"
+      if (isBrowser) {
+        const lastReminder = localStorage.getItem("rv_last_reminder")
+        const today = new Date().toDateString()
 
-      if (lastReminder !== today) {
-        // Mostrar el recordatorio después de un breve retraso
-        const timer = setTimeout(() => {
-          setShowExpiryReminder(true)
-          // Guardar que ya se mostró hoy
-          localStorage.setItem("rv_last_reminder", today)
-        }, 2000)
+        if (lastReminder !== today) {
+          // Mostrar el recordatorio después de un breve retraso
+          const timer = setTimeout(() => {
+            setShowExpiryReminder(true)
+            // Guardar que ya se mostró hoy
+            localStorage.setItem("rv_last_reminder", today)
+          }, 2000)
 
-        return () => clearTimeout(timer)
+          return () => clearTimeout(timer)
+        }
       }
     }
   }, [isPremium, remainingDays])
@@ -856,6 +861,11 @@ export default function TravelStampGenerator() {
               </div>
             )}
 
+            <div
+              ref={mapContainerRef}
+              className="w-full h-[400px] rounded-lg overflow-hidden border-2 border-amber-200"
+            />
+
             {destinations.length > 0 && (
               <div className="mt-4 text-sm text-amber-800">
                 <p>
@@ -1221,7 +1231,7 @@ export default function TravelStampGenerator() {
         </Card>
       </div>
       {renderPremiumModal()}
-      {isPremium && (
+      {isPremium && showExpiryReminder && (
         <ExpiryReminderModal onRenew={openLemonSqueezyCheckout} onClose={() => setShowExpiryReminder(false)} />
       )}
     </div>

@@ -6,8 +6,13 @@ const EXPIRY_DATE_KEY = "rv_expiry_date"
 // Duración de la suscripción premium en milisegundos (3 meses)
 const PREMIUM_DURATION = 1000 * 60 * 60 * 24 * 90 // 90 días
 
+// Verificar si estamos en el navegador
+const isBrowser = typeof window !== "undefined"
+
 // Guardar estado premium con fecha de expiración
 export function savePremiumStatus(orderId: string): void {
+  if (!isBrowser) return
+
   // Calcular fecha de expiración (3 meses desde ahora)
   const expiryDate = Date.now() + PREMIUM_DURATION
 
@@ -18,6 +23,8 @@ export function savePremiumStatus(orderId: string): void {
 
 // Verificar si el usuario es premium y si no ha expirado
 export function isPremiumUser(): boolean {
+  if (!isBrowser) return false
+
   const isPremium = localStorage.getItem(PREMIUM_KEY) === "true"
   if (!isPremium) return false
 
@@ -33,11 +40,14 @@ export function isPremiumUser(): boolean {
 
 // Obtener el ID de orden
 export function getOrderId(): string | null {
+  if (!isBrowser) return null
   return localStorage.getItem(ORDER_ID_KEY)
 }
 
 // Obtener la fecha de expiración
 export function getExpiryDate(): Date | null {
+  if (!isBrowser) return null
+
   const expiryDateStr = localStorage.getItem(EXPIRY_DATE_KEY)
   if (!expiryDateStr) return null
 
@@ -46,6 +56,8 @@ export function getExpiryDate(): Date | null {
 
 // Obtener días restantes de la suscripción
 export function getRemainingDays(): number | null {
+  if (!isBrowser) return null
+
   const expiryDate = getExpiryDate()
   if (!expiryDate) return null
 
@@ -58,8 +70,12 @@ export function getRemainingDays(): number | null {
 
 // Limpiar estado premium (por si necesitas una función de logout)
 export function clearPremiumStatus(): void {
+  if (!isBrowser) return
+
   localStorage.removeItem(PREMIUM_KEY)
   localStorage.removeItem(ORDER_ID_KEY)
   localStorage.removeItem(EXPIRY_DATE_KEY)
 }
+
+
 
