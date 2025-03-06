@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { isPremiumUser } from "@/utils/premium-storage"
 import { useState, useEffect } from "react"
 import ActivatePremiumModal from "./activate-premium-modal"
+import Link from "next/link"
 
 // URL directa al producto en LemonSqueezy
 const LEMONSQUEEZY_PRODUCT_URL = "https://travelprint.lemonsqueezy.com/buy/2002abe5-88e1-4541-95f6-8ca287abaa44"
@@ -29,16 +30,18 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-amber-50/80 backdrop-blur supports-[backdrop-filter]:bg-amber-50/60">
       <div className="container flex h-14 items-center justify-between">
         <div className="flex items-center gap-2">
-          <h1 className="text-xl font-bold text-amber-900">Recuerdo Viajero</h1>
-          {isPremium && (
-            <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
-              <Crown className="h-3 w-3 mr-1" />
-              Premium
-            </span>
-          )}
+          <Link href="/" className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-amber-900">Recuerdo Viajero</h1>
+            {isPremium && (
+              <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                <Crown className="h-3 w-3 mr-1" />
+                Premium
+              </span>
+            )}
+          </Link>
         </div>
 
         <nav className="flex items-center gap-2">
@@ -66,6 +69,8 @@ export function SiteHeader() {
     </header>
   )
 }
+
+
 
 
 
