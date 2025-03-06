@@ -601,6 +601,8 @@ export default function TravelStampGenerator() {
       <div className="lg:col-span-2 space-y-6">
         <Card>
           <CardContent className="p-6">
+            <h2>Generador de Estampitas</h2>
+            <p>Versión simplificada para depuración</p>
             <div className="flex flex-col md:flex-row gap-4 mb-4">
               <div className="flex-1">
                 <Label htmlFor="destination">Añadir destino</Label>
@@ -653,152 +655,153 @@ export default function TravelStampGenerator() {
                 </p>
               </div>
             )}
-          </CardContent>
-        </Card>
+            <Card>
+              <CardContent className="p-6">
+                <Tabs defaultValue="map">
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="map">Estilo de Mapa</TabsTrigger>
+                    <TabsTrigger value="route">Estilo de Ruta</TabsTrigger>
+                    <TabsTrigger value="stamp">Estilo de Estampita</TabsTrigger>
+                    <TabsTrigger value="format">Formato</TabsTrigger>
+                  </TabsList>
 
-        <Card>
-          <CardContent className="p-6">
-            <Tabs defaultValue="map">
-              <TabsList className="mb-4">
-                <TabsTrigger value="map">Estilo de Mapa</TabsTrigger>
-                <TabsTrigger value="route">Estilo de Ruta</TabsTrigger>
-                <TabsTrigger value="stamp">Estilo de Estampita</TabsTrigger>
-                <TabsTrigger value="format">Formato</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="map">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="map-style">Estilo de mapa</Label>
-                    <Select value={mapStyle} onValueChange={setMapStyle}>
-                      <SelectTrigger id="map-style">
-                        <SelectValue placeholder="Selecciona un estilo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {mapStyles.map((style) => (
-                          <SelectItem key={style.id} value={style.id}>
-                            {style.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="route">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="route-color">Color de ruta</Label>
-                    <div className="flex gap-2 items-center mt-1">
-                      <input
-                        type="color"
-                        id="route-color"
-                        value={routeColor}
-                        onChange={(e) => setRouteColor(e.target.value)}
-                        className="w-10 h-10 rounded cursor-pointer"
-                      />
-                      <span className="text-sm">{routeColor}</span>
+                  <TabsContent value="map">
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="map-style">Estilo de mapa</Label>
+                        <Select value={mapStyle} onValueChange={setMapStyle}>
+                          <SelectTrigger id="map-style">
+                            <SelectValue placeholder="Selecciona un estilo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {mapStyles.map((style) => (
+                              <SelectItem key={style.id} value={style.id}>
+                                {style.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                  </div>
+                  </TabsContent>
 
-                  <div>
-                    <Label htmlFor="route-width">Grosor de ruta: {routeWidth[0]}px</Label>
-                    <Slider
-                      id="route-width"
-                      value={routeWidth}
-                      min={1}
-                      max={10}
-                      step={1}
-                      onValueChange={setRouteWidth}
-                      className="mt-2"
-                    />
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="stamp">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="stamp-template">Plantilla</Label>
-                    <Select value={stampTemplate} onValueChange={setStampTemplate}>
-                      <SelectTrigger id="stamp-template">
-                        <SelectValue placeholder="Selecciona una plantilla" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {stampTemplates.map((template) => (
-                          <SelectItem key={template.id} value={template.id}>
-                            {template.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="trip-name">Nombre del viaje</Label>
-                    <Input
-                      id="trip-name"
-                      value={tripName}
-                      onChange={(e) => setTripName(e.target.value)}
-                      placeholder="Mi Aventura"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="trip-date">Fecha del viaje</Label>
-                    <Input
-                      id="trip-date"
-                      type="text"
-                      value={tripDate}
-                      onChange={(e) => setTripDate(e.target.value)}
-                      placeholder="Marzo 2025"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="trip-comment">
-                      Comentario
-                      <span className="text-xs text-muted-foreground ml-2">({tripComment.length}/150 caracteres)</span>
-                    </Label>
-                    <Textarea
-                      id="trip-comment"
-                      value={tripComment}
-                      onChange={(e) => {
-                        // Limitar a 150 caracteres
-                        if (e.target.value.length <= 150) {
-                          setTripComment(e.target.value)
-                        }
-                      }}
-                      placeholder="Escribe un comentario sobre tu viaje..."
-                      className="resize-none"
-                      rows={3}
-                    />
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="format">
-                <div className="space-y-4">
-                  <Label>Formato de estampita</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {stampFormats.map((format) => (
-                      <div
-                        key={format.id}
-                        className={`border rounded-lg p-4 cursor-pointer transition-all hover:bg-muted ${
-                          stampFormat === format.id ? "bg-muted ring-2 ring-primary" : ""
-                        }`}
-                        onClick={() => setStampFormat(format.id)}
-                      >
-                        <div className="flex flex-col items-center gap-2 text-center">
-                          <format.icon className="h-8 w-8 text-amber-600" />
-                          <span className="text-sm font-medium">{format.name}</span>
+                  <TabsContent value="route">
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="route-color">Color de ruta</Label>
+                        <div className="flex gap-2 items-center mt-1">
+                          <input
+                            type="color"
+                            id="route-color"
+                            value={routeColor}
+                            onChange={(e) => setRouteColor(e.target.value)}
+                            className="w-10 h-10 rounded cursor-pointer"
+                          />
+                          <span className="text-sm">{routeColor}</span>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
+
+                      <div>
+                        <Label htmlFor="route-width">Grosor de ruta: {routeWidth[0]}px</Label>
+                        <Slider
+                          id="route-width"
+                          value={routeWidth}
+                          min={1}
+                          max={10}
+                          step={1}
+                          onValueChange={setRouteWidth}
+                          className="mt-2"
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="stamp">
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="stamp-template">Plantilla</Label>
+                        <Select value={stampTemplate} onValueChange={setStampTemplate}>
+                          <SelectTrigger id="stamp-template">
+                            <SelectValue placeholder="Selecciona una plantilla" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {stampTemplates.map((template) => (
+                              <SelectItem key={template.id} value={template.id}>
+                                {template.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="trip-name">Nombre del viaje</Label>
+                        <Input
+                          id="trip-name"
+                          value={tripName}
+                          onChange={(e) => setTripName(e.target.value)}
+                          placeholder="Mi Aventura"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="trip-date">Fecha del viaje</Label>
+                        <Input
+                          id="trip-date"
+                          type="text"
+                          value={tripDate}
+                          onChange={(e) => setTripDate(e.target.value)}
+                          placeholder="Marzo 2025"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="trip-comment">
+                          Comentario
+                          <span className="text-xs text-muted-foreground ml-2">
+                            ({tripComment.length}/150 caracteres)
+                          </span>
+                        </Label>
+                        <Textarea
+                          id="trip-comment"
+                          value={tripComment}
+                          onChange={(e) => {
+                            // Limitar a 150 caracteres
+                            if (e.target.value.length <= 150) {
+                              setTripComment(e.target.value)
+                            }
+                          }}
+                          placeholder="Escribe un comentario sobre tu viaje..."
+                          className="resize-none"
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="format">
+                    <div className="space-y-4">
+                      <Label>Formato de estampita</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {stampFormats.map((format) => (
+                          <div
+                            key={format.id}
+                            className={`border rounded-lg p-4 cursor-pointer transition-all hover:bg-muted ${
+                              stampFormat === format.id ? "bg-muted ring-2 ring-primary" : ""
+                            }`}
+                            onClick={() => setStampFormat(format.id)}
+                          >
+                            <div className="flex flex-col items-center gap-2 text-center">
+                              <format.icon className="h-8 w-8 text-amber-600" />
+                              <span className="text-sm font-medium">{format.name}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
           </CardContent>
         </Card>
       </div>
@@ -806,7 +809,7 @@ export default function TravelStampGenerator() {
       <div className="lg:col-span-1">
         <Card>
           <CardContent className="p-6">
-            <h2 className="text-xl font-bold mb-4 text-center">Vista Previa</h2>
+            <h2>Vista Previa</h2>
             {destinations.length < 2 ? (
               <div className="border-2 border-dashed border-amber-200 rounded-lg p-8 text-center">
                 <MapPin className="h-12 w-12 mx-auto text-amber-300 mb-2" />
@@ -892,6 +895,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
