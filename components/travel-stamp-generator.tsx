@@ -900,10 +900,16 @@ export default function TravelStampGenerator() {
             <Card className="mt-4">
               <CardContent className="p-6">
                 <Tabs defaultValue="map">
-                  <TabsList className="mb-4">
-                    <TabsTrigger value="map">Estilo de Mapa</TabsTrigger>
-                    <TabsTrigger value="stamp">Estilo de Estampita</TabsTrigger>
-                    <TabsTrigger value="format">Formato</TabsTrigger>
+                  <TabsList className="mb-4 w-full overflow-x-auto flex whitespace-nowrap scrollbar-none">
+                    <TabsTrigger value="map" className="flex-none px-3">
+                      Mapa
+                    </TabsTrigger>
+                    <TabsTrigger value="stamp" className="flex-none px-3">
+                      Estampita
+                    </TabsTrigger>
+                    <TabsTrigger value="format" className="flex-none px-3">
+                      Formato
+                    </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="map">
@@ -1286,6 +1292,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
