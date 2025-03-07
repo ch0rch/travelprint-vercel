@@ -30,7 +30,7 @@ import { isPremiumUser, getExpiryDate, getRemainingDays, checkPurchaseFromURL } 
 import PremiumBadge from "@/components/premium-badge"
 import ExpiryReminderModal from "@/components/expiry-reminder-modal"
 import ActivatePremiumModal from "@/components/activate-premium-modal"
-import ShareModal from "@/components/share-modal" // Import the ShareModal component
+import ShareModal from "@/components/share-modal"
 
 // Normalmente usaríamos una variable de entorno, pero para el prototipo usamos un token público
 mapboxgl.accessToken = "pk.eyJ1Ijoiam9yamVyb2phcyIsImEiOiJjbTd2eG42bXYwMTNlMm1vcWRycWpicmRhIn0.hDwomrUtCTWGe0gtLHil2Q"
@@ -120,7 +120,7 @@ export default function TravelStampGenerator() {
   const [borderColor, setBorderColor] = useState(pastelColors[0].borderColor)
   const [textColor, setTextColor] = useState(pastelColors[0].textColor)
   const [stampFormat, setStampFormat] = useState("square")
-  const [showShareModal, setShowShareModal] = useState(false) // Added state for share modal
+  const [showShareModal, setShowShareModal] = useState(false)
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const previewMapRef = useRef<HTMLDivElement>(null)
@@ -829,7 +829,6 @@ export default function TravelStampGenerator() {
                       value={newDestination}
                       onChange={(e) => setNewDestination(e.target.value)}
                       placeholder="Ej: Talca, Constitución, Concepción..."
-                      onKeyDown={(e                      placeholder="Ej: Talca, Constitución, Concepción..."\
                       onKeyDown={(e) => e.key === "Enter" && searchDestination()}
                     />
                     <Button onClick={searchDestination} disabled={isSearching || !newDestination.trim()}>
@@ -1117,14 +1116,8 @@ export default function TravelStampGenerator() {
                     <div className="flex-grow flex flex-col justify-between bg-transparent">
                       <div className="space-y-3 p-4">
                         <div className="text-center">
-                          <h3 className={`font-serif font-bold text-lg tracking-wide ${textColor}`}>
-                            {tripName}
-                          </h3>
-                          {tripDate && (
-                            <p className={`text-sm ${textColor} font-medium opacity-75 mt-1`}>
-                              {tripDate}
-                            </p>
-                          )}
+                          <h3 className={`font-serif font-bold text-lg tracking-wide ${textColor}`}>{tripName}</h3>
+                          {tripDate && <p className={`text-sm ${textColor} font-medium opacity-75 mt-1`}>{tripDate}</p>}
                         </div>
 
                         {tripComment && isPremium && (
@@ -1200,6 +1193,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
