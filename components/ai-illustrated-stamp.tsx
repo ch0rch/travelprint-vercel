@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Crown, Download, RefreshCw, Sparkles, ImageIcon, AlertCircle } from "lucide-react"
+import { Crown, Download, RefreshCw, Sparkles, ImageIcon, AlertCircle, Clock } from "lucide-react"
 import Image from "next/image"
 import { isPremiumUser } from "@/utils/premium-storage"
 
@@ -87,10 +87,12 @@ export default function AIIllustratedStamp({
   const [additionalPrompt, setAdditionalPrompt] = useState("")
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isTimeoutError, setIsTimeoutError] = useState(false)
   const isPremium = isPremiumUser()
+  const [retryCount, setRetryCount] = useState(0)
 
   // Función para generar la estampita ilustrada
-  const generateIllustration = async () => {
+  const generateIllustration = async (retry = false) => {
     if (destinations.length < 2) return
 
     // Bloquear completamente la generación para usuarios no premium
@@ -102,6 +104,17 @@ export default function AIIllustratedStamp({
     setIsGenerating(true)
     setIsRegenerating(false)
     setError(null)
+    setIsTimeoutError(false)
+
+    // Si es un reintento, incrementar el contador
+    if (retry) {
+      setRetryCount((prev) => prev + 1)
+    } else {
+      setRetryCount(0)
+    }
+
+    // Si ya hemos intentado más de 2 veces, usar un prompt más corto
+    const useSimplifiedPrompt = retryCount >= 2
 
     try {
       // Construir la descripción geográfica y contextual del viaje
@@ -111,95 +124,131 @@ export default function AIIllustratedStamp({
       // Identificar el tipo de paisaje basado en los destinos (ejemplo simple)
       const landscapeType = identifyLandscapeType(destinations)
 
-      // Crear el prompt para la IA
-      const prompt = `
-        Crea una estampita de viaje para "${tripName}" que recorre ${destinationNames}.
-        
-        Detalles del viaje:
-        - Distancia: ${distanceKm} kilómetros
-        - Fecha: ${tripDate || "No especificada"}
-        - Tipo de paisaje: ${landscapeType}
-        ${tripComment ? `- Historia del viaje: ${tripComment}` : ""}
-        ${additionalPrompt ? `- Elementos a incluir: ${additionalPrompt}` : ""}
-        
-        El nombre "${tripName}" debe aparecer prominentemente en la estampita.
-        Incluye elementos visuales que representen los destinos mencionados.
-      `
+      // Crear el prompt para la IA (versión simplificada si es un reintento)
+      let prompt
 
-      setError(null)
+      if (useSimplifiedPrompt) {
+        // Versión muy simplificada para evitar tiempos de espera
+        prompt = `Souvenir de viaje para "${tripName}" con destinos: ${destinationNames}.`
+      } else {
+        prompt = `
+          Crea una estampita de viaje para "${tripName}" que recorre ${destinationNames}.
+          
+          Detalles del viaje:
+          - Distancia: ${distanceKm} kilómetros
+          - Fecha: ${tripDate || "No especificada"}
+          - Tipo de paisaje: ${landscapeType}
+          ${tripComment ? `- Historia del viaje: ${tripComment}` : ""}
+          ${additionalPrompt ? `- Elementos a incluir: ${additionalPrompt}` : ""}
+          
+          El nombre "${tripName}" debe aparecer prominentemente en la estampita.
+        `
+      }
+
       console.log("Enviando solicitud para generar ilustración")
 
-      // Llamada a la API de generación de imágenes
-      const response = await fetch("/api/generate-illustration", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt,
-          style: selectedStyle,
-          creativity: creativity[0],
-          isPremium,
-        }),
-      })
+      // Implementar un timeout en el cliente también
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 segundos de timeout
 
-      // Verificar primero si la respuesta es válida
-      if (!response.ok) {
-        const contentType = response.headers.get("content-type") || ""
+      try {
+        // Llamada a la API de generación de imágenes
+        const response = await fetch("/api/generate-illustration", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt,
+            style: selectedStyle,
+            creativity: creativity[0],
+            isPremium,
+          }),
+          signal: controller.signal,
+        })
 
-        // Intentar obtener el texto del error
-        let errorText
-        try {
-          errorText = await response.text()
-        } catch (e) {
-          errorText = "No se pudo leer la respuesta del servidor"
-        }
+        clearTimeout(timeoutId)
 
-        console.error("Error en respuesta API:", response.status, errorText)
+        // Verificar primero si la respuesta es válida
+        if (!response.ok) {
+          const contentType = response.headers.get("content-type") || ""
 
-        // Intentar parsear como JSON si parece ser JSON
-        let errorData
-        if (contentType.includes("application/json") && errorText.trim().startsWith("{")) {
+          // Intentar obtener el texto del error
+          let errorText
           try {
-            errorData = JSON.parse(errorText)
-            throw new Error(errorData.error || errorData.details || "Error al generar la ilustración")
+            errorText = await response.text()
           } catch (e) {
-            // Si falla el parsing, usar el texto original
+            errorText = "No se pudo leer la respuesta del servidor"
+          }
+
+          console.error("Error en respuesta API:", response.status, errorText)
+
+          // Verificar si es un error de tiempo de espera
+          if (
+            response.status === 504 ||
+            errorText.includes("timeout") ||
+            errorText.includes("FUNCTION_INVOCATION_TIMEOUT")
+          ) {
+            setIsTimeoutError(true)
+            throw new Error(
+              "La generación de la imagen está tardando demasiado tiempo. Por favor, intenta con un estilo diferente o simplifica tu solicitud.",
+            )
+          }
+
+          // Intentar parsear como JSON si parece ser JSON
+          let errorData
+          if (contentType.includes("application/json") && errorText.trim().startsWith("{")) {
+            try {
+              errorData = JSON.parse(errorText)
+              throw new Error(errorData.error || errorData.details || "Error al generar la ilustración")
+            } catch (e) {
+              // Si falla el parsing, usar el texto original
+              throw new Error(`Error del servidor: ${response.status} - ${errorText.substring(0, 100)}`)
+            }
+          } else {
             throw new Error(`Error del servidor: ${response.status} - ${errorText.substring(0, 100)}`)
           }
-        } else {
-          throw new Error(`Error del servidor: ${response.status} - ${errorText.substring(0, 100)}`)
         }
-      }
 
-      // Verificar el tipo de contenido
-      const contentType = response.headers.get("content-type") || ""
-      if (!contentType.includes("application/json")) {
-        console.error("La respuesta no es JSON:", contentType)
-        let errorText
+        // Verificar el tipo de contenido
+        const contentType = response.headers.get("content-type") || ""
+        if (!contentType.includes("application/json")) {
+          console.error("La respuesta no es JSON:", contentType)
+          throw new Error(`Respuesta inesperada del servidor: formato no válido`)
+        }
+
+        // Ahora intentamos parsear el JSON con manejo de errores
+        let data
         try {
-          errorText = await response.text()
+          data = await response.json()
         } catch (e) {
-          errorText = "Contenido no legible"
+          console.error("Error al parsear JSON:", e)
+          throw new Error("Error al procesar la respuesta del servidor. La respuesta no es un JSON válido.")
         }
-        throw new Error(`Respuesta inesperada del servidor: ${errorText.substring(0, 100)}`)
-      }
 
-      // Ahora intentamos parsear el JSON con manejo de errores
-      let data
-      try {
-        data = await response.json()
-      } catch (e) {
-        console.error("Error al parsear JSON:", e)
-        throw new Error("Error al procesar la respuesta del servidor. La respuesta no es un JSON válido.")
-      }
+        if (!data.imageUrl) {
+          throw new Error("No se recibió URL de imagen en la respuesta")
+        }
 
-      if (!data.imageUrl) {
-        throw new Error("No se recibió URL de imagen en la respuesta")
-      }
+        console.log("Imagen generada correctamente:", data.note || "OK")
+        setGeneratedImage(data.imageUrl)
 
-      console.log("Imagen generada correctamente:", data.note || "OK")
-      setGeneratedImage(data.imageUrl)
+        // Si hay una nota de respaldo, mostrarla como advertencia
+        if (data.note && data.note.includes("respaldo")) {
+          setError(
+            "Usando imagen de ejemplo debido a problemas con el servicio de IA. La imagen no es generada específicamente para tu ruta.",
+          )
+        }
+      } catch (fetchError) {
+        // Manejar errores de AbortController (timeout)
+        if (fetchError.name === "AbortError") {
+          setIsTimeoutError(true)
+          throw new Error(
+            "La solicitud ha excedido el tiempo de espera. Estamos usando una imagen de ejemplo como alternativa.",
+          )
+        }
+        throw fetchError
+      }
     } catch (error) {
       console.error("Error generando la ilustración:", error)
 
@@ -215,6 +264,17 @@ export default function AIIllustratedStamp({
           errorMessage = "Demasiadas solicitudes a la API de OpenAI. Por favor, intenta más tarde."
         } else if (error.message.includes("content policy")) {
           errorMessage = "El contenido solicitado no cumple con las políticas de contenido."
+        } else if (
+          error.message.includes("tiempo de espera") ||
+          error.message.includes("timeout") ||
+          error.message.includes("FUNCTION_INVOCATION_TIMEOUT")
+        ) {
+          setIsTimeoutError(true)
+          errorMessage = "La generación está tardando demasiado. Estamos usando una imagen de ejemplo como alternativa."
+
+          // Usar una imagen de ejemplo para este estilo
+          const fallbackImageUrl = artStyles.find((s) => s.id === selectedStyle)?.id || "watercolor"
+          setGeneratedImage(SAMPLE_IMAGES[fallbackImageUrl as keyof typeof SAMPLE_IMAGES] || SAMPLE_IMAGES.watercolor)
         } else {
           errorMessage = error.message
         }
@@ -229,7 +289,7 @@ export default function AIIllustratedStamp({
   // Función para regenerar con los mismos parámetros
   const regenerateIllustration = async () => {
     setIsRegenerating(true)
-    await generateIllustration()
+    await generateIllustration(true) // Pasar true para indicar que es un reintento
   }
 
   // Función para calcular la distancia aproximada entre destinos
@@ -261,7 +321,6 @@ export default function AIIllustratedStamp({
   }
 
   // Función para identificar el tipo de paisaje basado en coordenadas
-  // Esta es una implementación simple, podría mejorarse con datos reales
   const identifyLandscapeType = (destinations: { coordinates: [number, number] }[]) => {
     // Calcular el centro aproximado de los destinos
     let avgLat = 0
@@ -296,6 +355,18 @@ export default function AIIllustratedStamp({
   // Obtener el estilo seleccionado
   const getSelectedStyleInfo = () => {
     return artStyles.find((style) => style.id === selectedStyle) || artStyles[0]
+  }
+
+  // Imágenes de ejemplo para diferentes estilos (copia del servidor para respaldo en cliente)
+  const SAMPLE_IMAGES = {
+    watercolor: "https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=1000&auto=format&fit=crop",
+    "vintage-postcard": "https://images.unsplash.com/photo-1516466723877-e4ec1d736c8a?q=80&w=1000&auto=format&fit=crop",
+    "pencil-sketch": "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=1000&auto=format&fit=crop",
+    "digital-art": "https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=1000&auto=format&fit=crop",
+    "oil-painting": "https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=1000&auto=format&fit=crop",
+    minimalist: "https://images.unsplash.com/photo-1605106702734-205df224ecce?q=80&w=1000&auto=format&fit=crop",
+    geometric: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=1000&auto=format&fit=crop",
+    anime: "https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1000&auto=format&fit=crop",
   }
 
   return (
@@ -397,7 +468,24 @@ export default function AIIllustratedStamp({
             <div className="text-sm text-red-700">
               <p className="font-medium mb-1">Error al generar el souvenir:</p>
               <p>{error}</p>
-              <p className="mt-2 text-xs">Puedes intentar con otro estilo o volver a intentarlo más tarde.</p>
+              <p className="mt-2 text-xs">
+                {isTimeoutError
+                  ? "La generación está tardando demasiado. Prueba con un estilo más simple o menos detalles."
+                  : "Puedes intentar con otro estilo o volver a intentarlo más tarde."}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isTimeoutError && generatedImage && (
+          <div className="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200 flex items-start">
+            <Clock className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-amber-700">
+              <p className="font-medium mb-1">Usando imagen de ejemplo</p>
+              <p>
+                Debido a problemas de tiempo de espera, estamos mostrando una imagen de ejemplo. Esta no es una imagen
+                generada específicamente para tu ruta.
+              </p>
             </div>
           </div>
         )}
@@ -405,7 +493,7 @@ export default function AIIllustratedStamp({
         <div className="mt-6">
           {!generatedImage ? (
             <Button
-              onClick={generateIllustration}
+              onClick={() => generateIllustration(false)}
               disabled={isGenerating || destinations.length < 2}
               className="w-full bg-gradient-to-r from-amber-500 to-amber-700 hover:from-amber-600 hover:to-amber-800"
             >
@@ -479,6 +567,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 
