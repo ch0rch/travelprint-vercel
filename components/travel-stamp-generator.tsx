@@ -21,6 +21,7 @@ import {
   Lock,
   Sparkles,
   Palette,
+  Share2,
 } from "lucide-react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
@@ -30,6 +31,7 @@ import { isPremiumUser, getExpiryDate, getRemainingDays, checkPurchaseFromURL } 
 import PremiumBadge from "@/components/premium-badge"
 import ExpiryReminderModal from "@/components/expiry-reminder-modal"
 import ActivatePremiumModal from "@/components/activate-premium-modal"
+import ShareModal from "@/components/share-modal" // Import the ShareModal component
 
 // Normalmente usaríamos una variable de entorno, pero para el prototipo usamos un token público
 mapboxgl.accessToken = "pk.eyJ1Ijoiam9yamVyb2phcyIsImEiOiJjbTd2eG42bXYwMTNlMm1vcWRycWpicmRhIn0.hDwomrUtCTWGe0gtLHil2Q"
@@ -119,6 +121,7 @@ export default function TravelStampGenerator() {
   const [borderColor, setBorderColor] = useState(pastelColors[0].borderColor)
   const [textColor, setTextColor] = useState(pastelColors[0].textColor)
   const [stampFormat, setStampFormat] = useState("square")
+  const [showShareModal, setShowShareModal] = useState(false) // Added state for share modal
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const previewMapRef = useRef<HTMLDivElement>(null)
@@ -827,7 +830,8 @@ export default function TravelStampGenerator() {
                       value={newDestination}
                       onChange={(e) => setNewDestination(e.target.value)}
                       placeholder="Ej: Talca, Constitución, Concepción..."
-                      onKeyDown={(e) => e.key === "Enter" && searchDestination()}
+                      on
+                      placeholder="Ej: Talca, Constitución, Concepción..."
                       onKeyDown={(e) => e.key === "Enter" && searchDestination()}
                     />
                     <Button onClick={searchDestination} disabled={isSearching || !newDestination.trim()}>
@@ -1179,6 +1183,10 @@ export default function TravelStampGenerator() {
                   Activar Premium
                 </Button>
               )}
+              <Button className="w-full" variant="outline" onClick={() => setShowShareModal(true)}>
+                <Share2 className="h-4 w-4 mr-2" />
+                Compartir con amigos
+              </Button>
               <div className="mt-2 text-center">
                 <button
                   onClick={refreshPreview}
@@ -1226,9 +1234,12 @@ export default function TravelStampGenerator() {
         <ExpiryReminderModal onRenew={openLemonSqueezyCheckout} onClose={() => setShowExpiryReminder(false)} />
       )}
       {showActivateModal && <ActivatePremiumModal onClose={() => setShowActivateModal(false)} />}
+      {showShareModal && <ShareModal onClose={() => setShowShareModal(false)} />}
     </div>
   )
 }
+
+
 
 
 
