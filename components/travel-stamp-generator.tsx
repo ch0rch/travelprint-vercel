@@ -829,7 +829,11 @@ export default function TravelStampGenerator() {
                       value={newDestination}
                       onChange={(e) => setNewDestination(e.target.value)}
                       placeholder="Ej: Talca, Constitución, Concepción..."
-                      onKeyDown={(e) => e.key === "Enter" && searchDestination()}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          searchDestination()
+                        }
+                      }}
                     />
                     <Button onClick={searchDestination} disabled={isSearching || !newDestination.trim()}>
                       <Plus className="h-4 w-4 mr-1" />
@@ -1169,7 +1173,7 @@ export default function TravelStampGenerator() {
               {!isPremium && (
                 <Button className="w-full" variant="outline" onClick={() => setShowActivateModal(true)}>
                   <Crown className="h-4 w-4 mr-2" />
-                  Activar Premium
+                  Activar tu Licencia
                 </Button>
               )}
             </div>
@@ -1193,6 +1197,7 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
 
 
 
