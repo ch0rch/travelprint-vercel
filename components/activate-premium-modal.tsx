@@ -31,7 +31,6 @@ export default function ActivatePremiumModal({ onClose }: ActivatePremiumModalPr
 
       if (result) {
         setSuccess(true)
-        // La página se recargará automáticamente después de un breve retraso
         setTimeout(() => {
           window.location.reload()
         }, 2000)
@@ -47,15 +46,20 @@ export default function ActivatePremiumModal({ onClose }: ActivatePremiumModalPr
   }
 
   return (
-    <div className="bg-black/50 absolute inset-0 flex items-center justify-center">
-      <Card className="max-w-md w-full">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <Card className="max-w-md w-full mx-4">
         <CardContent className="p-6">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center">
               <Crown className="h-6 w-6 text-amber-500 mr-2" />
               <h3 className="text-xl font-bold">Activar Premium</h3>
             </div>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100">
               &times;
             </button>
           </div>
@@ -114,8 +118,8 @@ export default function ActivatePremiumModal({ onClose }: ActivatePremiumModalPr
                 <h4 className="text-sm font-medium mb-2">¿No encuentras tu clave de licencia?</h4>
                 <p className="text-xs text-muted-foreground">
                   Revisa tu correo electrónico (incluyendo la carpeta de spam) o contacta a soporte en{" "}
-                  <a href="mailto:hi@travelprint.me" className="text-amber-600 hover:underline">
-                    hi@travelprint.me
+                  <a href="mailto:soporte@travelprint.me" className="text-amber-600 hover:underline">
+                    soporte@travelprint.me
                   </a>
                 </p>
               </div>
@@ -126,6 +130,7 @@ export default function ActivatePremiumModal({ onClose }: ActivatePremiumModalPr
     </div>
   )
 }
+
 
 
 
