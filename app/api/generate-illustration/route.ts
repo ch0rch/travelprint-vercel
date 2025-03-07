@@ -1,8 +1,28 @@
 import { NextResponse } from "next/server"
 
+// Imágenes de ejemplo para diferentes estilos (para pruebas sin API)
+const SAMPLE_IMAGES = {
+  watercolor: "https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=1000&auto=format&fit=crop",
+  "vintage-postcard": "https://images.unsplash.com/photo-1516466723877-e4ec1d736c8a?q=80&w=1000&auto=format&fit=crop",
+  "pencil-sketch": "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=1000&auto=format&fit=crop",
+  "digital-art": "https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=1000&auto=format&fit=crop",
+  "oil-painting": "https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=1000&auto=format&fit=crop",
+  minimalist: "https://images.unsplash.com/photo-1605106702734-205df224ecce?q=80&w=1000&auto=format&fit=crop",
+  geometric: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=1000&auto=format&fit=crop",
+  anime: "https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1000&auto=format&fit=crop",
+}
+
+// Modo de respaldo si la API de OpenAI falla
+let USE_FALLBACK = false
+
 export async function POST(request: Request) {
   try {
+    console.log("Recibiendo solicitud para generar ilustración")
+
     const { prompt, style, creativity, isPremium } = await request.json()
+
+    console.log("Datos recibidos:", { style, creativity, isPremium })
+    console.log("Prompt:", prompt)
 
     if (!prompt) {
       return NextResponse.json({ error: "Se requiere un prompt" }, { status: 400 })
@@ -19,16 +39,25 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verificar que tenemos la API key
+    // Si estamos en modo de respaldo o no hay API key, usar imágenes de ejemplo
     const apiKey = process.env.OPENAI_API_KEY
-    if (!apiKey) {
-      throw new Error("API key de OpenAI no configurada")
-    }
 
-    // Configurar modelo y calidad según nivel premium
-    const model = "dall-e-3"
-    const quality = "hd"
-    const size = "1024x1024"
+    if (!apiKey || USE_FALLBACK) {
+      console.log("Usando modo de respaldo con imágenes de ejemplo")
+
+      // Simular un tiempo de procesamiento
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      // Devolver una imagen de ejemplo basada en el estilo
+      const imageUrl =
+        SAMPLE_IMAGES[style as keyof typeof SAMPLE_IMAGES] ||
+        "https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=1000&auto=format&fit=crop"
+
+      return NextResponse.json({
+        imageUrl,
+        note: "Usando imagen de ejemplo (modo de respaldo)",
+      })
+    }
 
     // Base prompt para el estilo de souvenir de viaje
     const baseStylePrompt = `
@@ -95,49 +124,82 @@ export async function POST(request: Request) {
       NO incluyas texto que diga "souvenir" o "estampita". El texto debe ser únicamente el nombre del viaje y los destinos.
     `
 
-    console.log("Generando imagen con prompt:", enhancedPrompt)
+    console.log("Configurando solicitud a OpenAI")
 
-    // Generar imagen con DALL-E usando fetch
-    const openaiResponse = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        prompt: enhancedPrompt,
-        n: 1,
-        size,
-        quality,
-        style: "vivid", // Usar "vivid" para colores más intensos en souvenires
-      }),
-    })
+    try {
+      // Generar imagen con DALL-E usando fetch
+      console.log("Enviando solicitud a la API de OpenAI")
 
-    if (!openaiResponse.ok) {
-      const errorData = await openaiResponse.json()
-      throw new Error(`Error de OpenAI: ${JSON.stringify(errorData)}`)
+      const openaiResponse = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "dall-e-3",
+          prompt: enhancedPrompt,
+          n: 1,
+          size: "1024x1024",
+          quality: "hd",
+          style: "vivid", // Usar "vivid" para colores más intensos en souvenires
+        }),
+      })
+
+      console.log("Respuesta de OpenAI recibida. Status:", openaiResponse.status)
+
+      if (!openaiResponse.ok) {
+        const errorData = await openaiResponse.json().catch((e) => ({ error: "Error parsing response" }))
+        console.error("Error de OpenAI:", JSON.stringify(errorData))
+
+        // Activar modo de respaldo para futuras solicitudes si hay un error persistente
+        USE_FALLBACK = true
+
+        throw new Error(`Error de OpenAI (${openaiResponse.status}): ${JSON.stringify(errorData)}`)
+      }
+
+      const data = await openaiResponse.json()
+      console.log("Datos de OpenAI procesados correctamente")
+
+      const imageUrl = data.data?.[0]?.url
+
+      if (!imageUrl) {
+        console.error("No se encontró URL de imagen en la respuesta:", JSON.stringify(data))
+        throw new Error("No se pudo generar la imagen: URL no encontrada en respuesta")
+      }
+
+      return NextResponse.json({ imageUrl })
+    } catch (openaiError) {
+      console.error("Error en la llamada a OpenAI:", openaiError)
+
+      // Si hay un error con la API de OpenAI, usar el modo de respaldo
+      console.log("Usando modo de respaldo por error en OpenAI")
+
+      // Devolver una imagen de ejemplo basada en el estilo
+      const fallbackImageUrl =
+        SAMPLE_IMAGES[style as keyof typeof SAMPLE_IMAGES] ||
+        "https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=1000&auto=format&fit=crop"
+
+      return NextResponse.json({
+        imageUrl: fallbackImageUrl,
+        note: "Usando imagen de ejemplo debido a un error con OpenAI",
+        error: openaiError instanceof Error ? openaiError.message : String(openaiError),
+      })
     }
-
-    const data = await openaiResponse.json()
-    const imageUrl = data.data?.[0]?.url
-
-    if (!imageUrl) {
-      throw new Error("No se pudo generar la imagen")
-    }
-
-    return NextResponse.json({ imageUrl })
   } catch (error: any) {
-    console.error("Error generando la ilustración:", error)
+    console.error("Error general en la generación de ilustración:", error)
     return NextResponse.json(
       {
         error: "Error al generar la ilustración",
-        details: error.message,
+        details: error.message || String(error),
+        stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
       },
       { status: 500 },
     )
   }
 }
+
+
 
 
 

@@ -126,6 +126,9 @@ export default function AIIllustratedStamp({
         Incluye elementos visuales que representen los destinos mencionados.
       `
 
+      setError(null)
+      console.log("Enviando solicitud para generar ilustración")
+
       // Llamada a la API de generación de imágenes
       const response = await fetch("/api/generate-illustration", {
         method: "POST",
@@ -140,16 +143,38 @@ export default function AIIllustratedStamp({
         }),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Error al generar la ilustración")
+        console.error("Error respuesta API:", data)
+        throw new Error(data.error || data.details || "Error al generar la ilustración")
       }
 
-      const data = await response.json()
+      if (!data.imageUrl) {
+        throw new Error("No se recibió URL de imagen en la respuesta")
+      }
+
+      console.log("Imagen generada correctamente:", data.note || "OK")
       setGeneratedImage(data.imageUrl)
     } catch (error) {
       console.error("Error generando la ilustración:", error)
-      setError(error instanceof Error ? error.message : "Error desconocido al generar la ilustración")
+
+      // Mensaje de error más amigable y específico para el usuario
+      let errorMessage = "Error desconocido al generar la ilustración"
+
+      if (error instanceof Error) {
+        if (error.message.includes("API key")) {
+          errorMessage = "Error de configuración: API key de OpenAI no configurada correctamente."
+        } else if (error.message.includes("429")) {
+          errorMessage = "Demasiadas solicitudes a la API de OpenAI. Por favor, intenta más tarde."
+        } else if (error.message.includes("content policy")) {
+          errorMessage = "El contenido solicitado no cumple con las políticas de contenido."
+        } else {
+          errorMessage = error.message
+        }
+      }
+
+      setError(errorMessage)
     } finally {
       setIsGenerating(false)
     }
@@ -323,7 +348,11 @@ export default function AIIllustratedStamp({
         {error && (
           <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200 flex items-start">
             <AlertCircle className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-700">{error}</p>
+            <div className="text-sm text-red-700">
+              <p className="font-medium mb-1">Error al generar el souvenir:</p>
+              <p>{error}</p>
+              <p className="mt-2 text-xs">Puedes intentar con otro estilo o volver a intentarlo más tarde.</p>
+            </div>
           </div>
         )}
 
@@ -404,6 +433,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 

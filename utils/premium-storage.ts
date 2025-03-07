@@ -12,6 +12,11 @@ const isBrowser = typeof window !== "undefined"
 // Función para verificar y guardar el estado premium
 export async function verifyAndSavePremiumStatus(licenseKey: string): Promise<boolean> {
   try {
+    // Verificar que estamos en el navegador
+    if (typeof window === "undefined") return false
+
+    console.log("Verificando licencia:", licenseKey)
+
     const response = await fetch("/api/verify-purchase", {
       method: "POST",
       headers: {
@@ -24,18 +29,25 @@ export async function verifyAndSavePremiumStatus(licenseKey: string): Promise<bo
       }),
     })
 
+    console.log("Respuesta de verificación:", response.status)
+
     if (!response.ok) {
-      console.error("Error response from server:", await response.text())
+      const errorText = await response.text()
+      console.error("Error response from server:", errorText)
       return false
     }
 
     const data = await response.json()
+    console.log("Datos de verificación:", data)
 
     if (data.success) {
       // Guardar con la fecha de expiración proporcionada por el servidor
       localStorage.setItem(PREMIUM_KEY, "true")
       localStorage.setItem(LICENSE_KEY_KEY, licenseKey)
       localStorage.setItem(EXPIRY_DATE_KEY, data.expiryDate.toString())
+
+      // Establecer la verificación de premium completada
+      console.log("Verificación completada, premium activado")
 
       // Forzar una recarga de la página para actualizar la UI
       window.location.reload()
@@ -56,17 +68,23 @@ export function isPremiumUser(): boolean {
   try {
     const isPremium = localStorage.getItem(PREMIUM_KEY) === "true"
 
-    // Verificar si ha expirado
     if (isPremium) {
+      console.log("Usuario premium detectado")
+
+      // Verificar si ha expirado
       const expiryDate = getExpiryDate()
       if (expiryDate && expiryDate < new Date()) {
+        console.log("Suscripción premium expirada")
         // Ha expirado, limpiar el estado premium
         clearPremiumStatus()
         return false
       }
+
+      console.log("Suscripción premium válida")
+      return true
     }
 
-    return isPremium
+    return false
   } catch (error) {
     console.error("Error al verificar estado premium:", error)
     return false
@@ -133,6 +151,8 @@ export function checkPurchaseFromURL(): void {
     console.error("Error checking purchase from URL:", error)
   }
 }
+
+
 
 
 
