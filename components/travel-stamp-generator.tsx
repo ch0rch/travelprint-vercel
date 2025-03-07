@@ -1119,7 +1119,7 @@ export default function TravelStampGenerator() {
                   <TabsTrigger value="map">Mapa</TabsTrigger>
                   <TabsTrigger value="ai" onClick={() => setShowAITab(true)}>
                     <Sparkles className="h-3 w-3 mr-1" />
-                    Ilustración IA
+                    Souvenir IA
                   </TabsTrigger>
                 </TabsList>
 
@@ -1183,32 +1183,32 @@ export default function TravelStampGenerator() {
                           <div className="border-2 border-amber-200 rounded-lg overflow-hidden">
                             <div className="aspect-square bg-amber-50 flex flex-col items-center justify-center p-4">
                               <Sparkles className="h-12 w-12 text-amber-500 mb-3" />
-                              <h3 className="text-lg font-bold text-amber-800 mb-2">Estampitas Ilustradas con IA</h3>
+                              <h3 className="text-lg font-bold text-amber-800 mb-2">Souvenires de Viaje con IA</h3>
                               <p className="text-sm text-amber-700 text-center mb-4">
-                                Transforma tus rutas en hermosas ilustraciones artísticas generadas con inteligencia
-                                artificial.
+                                Transforma tus rutas en auténticos souvenires de viaje: pegatinas, emblemas y stickers
+                                generados con IA.
                               </p>
 
                               {/* Mostrar ejemplos de estilos */}
                               <div className="grid grid-cols-2 gap-2 w-full max-w-xs mb-4">
                                 <div className="bg-white rounded border border-amber-200 p-2">
                                   <div className="aspect-square bg-amber-100 rounded flex items-center justify-center mb-1">
-                                    <span className="text-xs text-amber-800">Acuarela</span>
+                                    <span className="text-xs text-amber-800">Postal Vintage</span>
                                   </div>
                                 </div>
                                 <div className="bg-white rounded border border-amber-200 p-2">
                                   <div className="aspect-square bg-amber-100 rounded flex items-center justify-center mb-1">
-                                    <span className="text-xs text-amber-800">Vintage</span>
+                                    <span className="text-xs text-amber-800">Emblema</span>
                                   </div>
                                 </div>
                                 <div className="bg-white rounded border border-amber-200 p-2">
                                   <div className="aspect-square bg-amber-100 rounded flex items-center justify-center mb-1">
-                                    <span className="text-xs text-amber-800">Minimalista</span>
+                                    <span className="text-xs text-amber-800">Sticker</span>
                                   </div>
                                 </div>
                                 <div className="bg-white rounded border border-amber-200 p-2">
                                   <div className="aspect-square bg-amber-100 rounded flex items-center justify-center mb-1">
-                                    <span className="text-xs text-amber-800">Anime</span>
+                                    <span className="text-xs text-amber-800">Parque Nacional</span>
                                   </div>
                                 </div>
                               </div>
@@ -1218,7 +1218,7 @@ export default function TravelStampGenerator() {
                                 className="w-full bg-gradient-to-r from-amber-500 to-amber-700"
                               >
                                 <Crown className="h-4 w-4 mr-2" />
-                                Desbloquear con Premium
+                                Desbloquear Souvenires IA
                               </Button>
                             </div>
                           </div>
@@ -1290,6 +1290,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 

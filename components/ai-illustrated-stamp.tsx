@@ -20,16 +20,56 @@ interface AIIllustratedStampProps {
   onOpenPremium: () => void
 }
 
-// Estilos artísticos para la IA
+// Estilos artísticos para la IA con descripciones mejoradas
 const artStyles = [
-  { id: "watercolor", name: "Acuarela", premium: false },
-  { id: "vintage-postcard", name: "Postal Vintage", premium: false },
-  { id: "pencil-sketch", name: "Dibujo a Lápiz", premium: false },
-  { id: "digital-art", name: "Arte Digital", premium: true },
-  { id: "oil-painting", name: "Pintura al Óleo", premium: true },
-  { id: "minimalist", name: "Minimalista", premium: true },
-  { id: "geometric", name: "Geométrico", premium: true },
-  { id: "anime", name: "Estilo Anime", premium: true },
+  {
+    id: "watercolor",
+    name: "Acuarela",
+    premium: false,
+    description: "Estilo suave con colores difuminados",
+  },
+  {
+    id: "vintage-postcard",
+    name: "Postal Vintage",
+    premium: false,
+    description: "Como una postal de los años 60",
+  },
+  {
+    id: "pencil-sketch",
+    name: "Dibujo a Lápiz",
+    premium: false,
+    description: "Boceto de cuaderno de viaje",
+  },
+  {
+    id: "digital-art",
+    name: "Arte Digital",
+    premium: true,
+    description: "Moderno con colores vibrantes",
+  },
+  {
+    id: "oil-painting",
+    name: "Emblema Clásico",
+    premium: true,
+    description: "Estilo parque nacional americano",
+  },
+  {
+    id: "minimalist",
+    name: "Minimalista",
+    premium: true,
+    description: "Diseño simple y elegante",
+  },
+  {
+    id: "geometric",
+    name: "Geométrico",
+    premium: true,
+    description: "Formas abstractas y patrones",
+  },
+  {
+    id: "anime",
+    name: "Sticker Kawaii",
+    premium: true,
+    description: "Estilo anime colorido",
+  },
 ]
 
 export default function AIIllustratedStamp({
@@ -68,17 +108,22 @@ export default function AIIllustratedStamp({
       const destinationNames = destinations.map((d) => d.name).join(", ")
       const distanceKm = calculateDistance(destinations)
 
+      // Identificar el tipo de paisaje basado en los destinos (ejemplo simple)
+      const landscapeType = identifyLandscapeType(destinations)
+
       // Crear el prompt para la IA
       const prompt = `
-        Crea una hermosa ilustración de estampita de viaje en estilo ${getStyleDescription(selectedStyle)} 
-        para un viaje llamado "${tripName}" 
-        que recorre ${destinationNames}.
-        ${tripDate ? `El viaje fue realizado en ${tripDate}.` : ""}
-        ${tripComment ? `Contexto adicional del viaje: ${tripComment}` : ""}
-        ${additionalPrompt ? `Detalles adicionales: ${additionalPrompt}` : ""}
-        La ruta tiene aproximadamente ${distanceKm} kilómetros de distancia.
-        Incluye elementos visuales que representen el paisaje y la cultura de la ruta.
-        Formato cuadrado, con aspecto de estampita o sello de viaje.
+        Crea una estampita de viaje para "${tripName}" que recorre ${destinationNames}.
+        
+        Detalles del viaje:
+        - Distancia: ${distanceKm} kilómetros
+        - Fecha: ${tripDate || "No especificada"}
+        - Tipo de paisaje: ${landscapeType}
+        ${tripComment ? `- Historia del viaje: ${tripComment}` : ""}
+        ${additionalPrompt ? `- Elementos a incluir: ${additionalPrompt}` : ""}
+        
+        El nombre "${tripName}" debe aparecer prominentemente en la estampita.
+        Incluye elementos visuales que representen los destinos mencionados.
       `
 
       // Llamada a la API de generación de imágenes
@@ -144,28 +189,42 @@ export default function AIIllustratedStamp({
     return Math.round(totalDistance)
   }
 
-  // Obtener descripción detallada del estilo para mejorar los resultados
-  const getStyleDescription = (styleId: string) => {
-    switch (styleId) {
-      case "watercolor":
-        return "acuarela con colores suaves y bordes difuminados"
-      case "vintage-postcard":
-        return "postal vintage con tipografías antiguas y colores envejecidos"
-      case "pencil-sketch":
-        return "dibujo a lápiz con trazos definidos y sombreado suave"
-      case "digital-art":
-        return "arte digital moderno con colores vibrantes"
-      case "oil-painting":
-        return "pintura al óleo con textura y pinceladas visibles"
-      case "minimalist":
-        return "minimalista con líneas simples y espacios negativos"
-      case "geometric":
-        return "geométrico con formas abstractas y patrones"
-      case "anime":
-        return "anime estilizado con colores brillantes y contornos definidos"
-      default:
-        return "acuarela artística"
+  // Función para identificar el tipo de paisaje basado en coordenadas
+  // Esta es una implementación simple, podría mejorarse con datos reales
+  const identifyLandscapeType = (destinations: { coordinates: [number, number] }[]) => {
+    // Calcular el centro aproximado de los destinos
+    let avgLat = 0
+    let avgLng = 0
+
+    destinations.forEach((dest) => {
+      avgLat += dest.coordinates[1]
+      avgLng += dest.coordinates[0]
+    })
+
+    avgLat /= destinations.length
+    avgLng /= destinations.length
+
+    // Identificación muy básica basada en coordenadas
+    // En América del Sur
+    if (avgLat < 0 && avgLng < -30) {
+      if (avgLng < -70) return "montañoso con cordilleras"
+      return "costero con playas"
     }
+    // En Europa
+    else if (avgLat > 35 && avgLat < 60 && avgLng > -10 && avgLng < 40) {
+      return "europeo con ciudades históricas"
+    }
+    // En América del Norte
+    else if (avgLat > 25 && avgLat < 50 && avgLng < -50) {
+      return "bosques y lagos"
+    }
+
+    return "variado con múltiples ecosistemas"
+  }
+
+  // Obtener el estilo seleccionado
+  const getSelectedStyleInfo = () => {
+    return artStyles.find((style) => style.id === selectedStyle) || artStyles[0]
   }
 
   return (
@@ -192,7 +251,7 @@ export default function AIIllustratedStamp({
 
           <TabsContent value="style">
             <div className="space-y-4">
-              <Label>Elige un estilo artístico</Label>
+              <Label>Elige un estilo de souvenir</Label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {artStyles.map((style) => (
                   <div
@@ -210,6 +269,7 @@ export default function AIIllustratedStamp({
                   >
                     <div className="text-center">
                       <span className="text-sm font-medium">{style.name}</span>
+                      <p className="text-xs text-muted-foreground mt-1">{style.description}</p>
                       {style.premium && (
                         <div className="flex items-center justify-center mt-1">
                           <Crown className="h-3 w-3 text-amber-500 mr-1" />
@@ -244,16 +304,16 @@ export default function AIIllustratedStamp({
               </div>
 
               <div>
-                <Label htmlFor="additional-prompt">Detalles adicionales (opcional)</Label>
+                <Label htmlFor="additional-prompt">Elementos a incluir (opcional)</Label>
                 <Input
                   id="additional-prompt"
-                  placeholder="Ej: 'Incluir montañas nevadas y un lago azul'"
+                  placeholder="Ej: 'montañas nevadas, lago azul, carretera serpenteante'"
                   value={additionalPrompt}
                   onChange={(e) => setAdditionalPrompt(e.target.value)}
                   className="mt-1"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Añade detalles específicos que quieras incluir en la ilustración
+                  Añade elementos específicos que quieras incluir en tu souvenir
                 </p>
               </div>
             </div>
@@ -277,12 +337,12 @@ export default function AIIllustratedStamp({
               {isGenerating ? (
                 <>
                   <Sparkles className="h-4 w-4 mr-2 animate-pulse" />
-                  Generando tu estampita...
+                  Generando tu souvenir...
                 </>
               ) : (
                 <>
                   <Sparkles className="h-4 w-4 mr-2" />
-                  Generar Estampita Ilustrada
+                  Generar Souvenir de Viaje
                 </>
               )}
             </Button>
@@ -293,13 +353,13 @@ export default function AIIllustratedStamp({
                   <div className="aspect-square bg-amber-50 flex items-center justify-center">
                     <div className="text-center">
                       <Sparkles className="h-8 w-8 mx-auto text-amber-500 animate-pulse mb-2" />
-                      <p className="text-amber-700">Regenerando tu estampita...</p>
+                      <p className="text-amber-700">Regenerando tu souvenir...</p>
                     </div>
                   </div>
                 ) : (
                   <Image
                     src={generatedImage || "/placeholder.svg"}
-                    alt={`Estampita ilustrada de ${tripName}`}
+                    alt={`Souvenir ilustrado de ${tripName}`}
                     width={500}
                     height={500}
                     className="w-full h-auto"
@@ -329,14 +389,14 @@ export default function AIIllustratedStamp({
             <p className="text-sm flex items-start">
               <Crown className="h-4 w-4 text-amber-500 mr-2 mt-0.5" />
               <span>
-                <span className="font-medium">Característica Premium:</span> Desbloquea la creación de estampitas
-                ilustradas con IA en diferentes estilos artísticos. Convierte tus rutas en obras de arte únicas y
-                personalizadas.
+                <span className="font-medium">Característica Premium:</span> Desbloquea la creación de souvenires
+                ilustrados con IA en diferentes estilos. Convierte tus rutas en recuerdos de viaje únicos y
+                personalizados.
               </span>
             </p>
             <Button onClick={onOpenPremium} className="w-full mt-3 bg-gradient-to-r from-amber-500 to-amber-700">
               <Crown className="h-4 w-4 mr-2" />
-              Desbloquear Ilustraciones IA
+              Desbloquear Souvenires IA
             </Button>
           </div>
         )}
@@ -344,6 +404,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 
