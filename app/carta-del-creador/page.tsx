@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { MapPin } from "lucide-react"
+import { SiteFooter } from "@/components/site-footer"
 
 export default function CartaDelCreador() {
   return (
@@ -92,7 +93,10 @@ export default function CartaDelCreador() {
           </div>
         </div>
       </div>
+      <SiteFooter />
     </main>
   )
 }
+
+
 

@@ -35,7 +35,11 @@ export function SiteHeader() {
       <div className="container flex h-14 items-center justify-between">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-amber-900">Recuerdo Viajero</h1>
+            <h1 className="text-xl font-bold text-amber-900 font-serif tracking-tight">
+              <span className="text-amber-700">Travel</span>
+              <span className="text-amber-900">Print</span>
+              <span className="text-amber-500 text-sm">.me</span>
+            </h1>
             {isPremium && (
               <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
                 <Crown className="h-3 w-3 mr-1" />
@@ -127,6 +131,8 @@ export function SiteHeader() {
     </header>
   )
 }
+
+
 
 
 

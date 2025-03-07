@@ -7,7 +7,7 @@ import { SiteHeader } from "@/components/site-header"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Recuerdo Viajero",
+  title: "TravelPrint.me",
   description: "Crea estampitas personalizadas de tus aventuras en ruta",
 }
 
@@ -33,5 +33,7 @@ export default function RootLayout({
     </html>
   )
 }
+
+
 
 
