@@ -74,7 +74,7 @@ const stampFormats = [
     name: "Cuadrado (1:1)",
     icon: Square,
     containerClass: "w-full aspect-square",
-    mapClass: "w-full h-[320px]",
+    mapClass: "w-full h-[65%]",
     previewClass: "max-w-[350px] mx-auto",
     premium: false,
   },
@@ -83,7 +83,7 @@ const stampFormats = [
     name: "Vertical (4:5)",
     icon: ImageIcon,
     containerClass: "w-full aspect-[4/5]",
-    mapClass: "w-full h-[400px]",
+    mapClass: "w-full h-[70%]",
     previewClass: "max-w-[280px] mx-auto",
     premium: true,
   },
@@ -92,7 +92,7 @@ const stampFormats = [
     name: "Historia (9:16)",
     icon: Smartphone,
     containerClass: "w-full aspect-[9/16]",
-    mapClass: "w-full h-[480px]",
+    mapClass: "w-full h-[75%]",
     previewClass: "max-w-[220px] mx-auto",
     premium: true,
   },
@@ -101,7 +101,7 @@ const stampFormats = [
     name: "Horizontal (16:9)",
     icon: MonitorSmartphone,
     containerClass: "w-full aspect-[16/9]",
-    mapClass: "w-full h-[300px]",
+    mapClass: "w-full h-[60%]",
     previewClass: "max-w-[350px] mx-auto",
     premium: true,
   },
@@ -1164,8 +1164,9 @@ export default function TravelStampGenerator() {
                   <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-amber-800/20 rounded-br-lg" />
 
                   {/* Contenido */}
-                  <div className="relative z-10 flex flex-col h-full overflow-hidden">
-                    <div ref={previewMapRef} className={getMapClasses()} style={{ position: "relative" }}>
+                  <div className="relative z-10 flex flex-col h-full">
+                    {/* Contenedor del mapa sin margin/padding bottom */}
+                    <div ref={previewMapRef} className={`${getMapClasses()} relative`}>
                       <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-10"></div>
                       <div className="absolute top-0 left-0 right-0 p-3 text-center z-20">
                         <h3 className="font-serif font-bold text-lg tracking-wide text-white drop-shadow-md">
@@ -1179,39 +1180,42 @@ export default function TravelStampGenerator() {
                       </div>
                     </div>
 
-                    <div className="p-3 space-y-2 flex-1 flex flex-col justify-end min-h-[120px]">
-                      <div className="flex items-center justify-center">
-                        <div className="inline-block px-2 py-1 bg-amber-100/50 rounded-full">
-                          <p className={`${textColor} text-[10px] font-medium`}>
-                            <strong>{calculateTotalDistance()}&nbsp;km</strong>&nbsp;recorridos
-                          </p>
-                        </div>
-                      </div>
-
-                      {tripComment && isPremium && (
-                        <div className="mt-2 px-2">
-                          <div className="relative">
-                            <span className={`absolute left-0 top-0 ${textColor} opacity-30 text-lg`}>"</span>
-                            <p className={`italic text-[10px] ${textColor} leading-relaxed px-4`}>{tripComment}</p>
-                            <span className={`absolute right-0 bottom-0 ${textColor} opacity-30 text-lg`}>"</span>
+                    {/* Contenedor inferior sin margin/padding top y con flex-grow */}
+                    <div className="flex-grow flex flex-col justify-end bg-transparent">
+                      <div className="space-y-2 p-3">
+                        <div className="flex items-center justify-center">
+                          <div className="inline-block px-2 py-1 bg-amber-100/50 rounded-full">
+                            <p className={`${textColor} text-[10px] font-medium`}>
+                              <strong>{calculateTotalDistance()}&nbsp;km</strong>&nbsp;recorridos
+                            </p>
                           </div>
                         </div>
-                      )}
 
-                      {travelTags.length > 0 && (
-                        <div className="flex flex-wrap justify-center gap-1.5 mt-2 px-2">
-                          {travelTags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="text-[9px] px-2 py-0.5 rounded-full bg-amber-100/80 text-amber-800 border border-amber-200 whitespace-nowrap"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                        {tripComment && isPremium && (
+                          <div className="px-2">
+                            <div className="relative">
+                              <span className={`absolute left-0 top-0 ${textColor} opacity-30 text-lg`}>"</span>
+                              <p className={`italic text-[10px] ${textColor} leading-relaxed px-4`}>{tripComment}</p>
+                              <span className={`absolute right-0 bottom-0 ${textColor} opacity-30 text-lg`}>"</span>
+                            </div>
+                          </div>
+                        )}
 
-                      <div className="mt-auto pt-2 text-center border-t border-amber-800/10 flex justify-between items-center px-2">
+                        {travelTags.length > 0 && (
+                          <div className="flex flex-wrap justify-center gap-1.5 px-2">
+                            {travelTags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="text-[9px] px-2 py-0.5 rounded-full bg-amber-100/80 text-amber-800 border border-amber-200 whitespace-nowrap"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-auto border-t border-amber-800/10 p-2 flex justify-between items-center">
                         <span className="text-[8px] opacity-70">travelprint.me</span>
                         <span className="text-[8px] font-medium opacity-70">Mi recuerdo de viaje</span>
                       </div>
@@ -1298,6 +1302,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
