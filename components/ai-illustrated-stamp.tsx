@@ -143,11 +143,55 @@ export default function AIIllustratedStamp({
         }),
       })
 
-      const data = await response.json()
-
+      // Verificar primero si la respuesta es válida
       if (!response.ok) {
-        console.error("Error respuesta API:", data)
-        throw new Error(data.error || data.details || "Error al generar la ilustración")
+        const contentType = response.headers.get("content-type") || ""
+
+        // Intentar obtener el texto del error
+        let errorText
+        try {
+          errorText = await response.text()
+        } catch (e) {
+          errorText = "No se pudo leer la respuesta del servidor"
+        }
+
+        console.error("Error en respuesta API:", response.status, errorText)
+
+        // Intentar parsear como JSON si parece ser JSON
+        let errorData
+        if (contentType.includes("application/json") && errorText.trim().startsWith("{")) {
+          try {
+            errorData = JSON.parse(errorText)
+            throw new Error(errorData.error || errorData.details || "Error al generar la ilustración")
+          } catch (e) {
+            // Si falla el parsing, usar el texto original
+            throw new Error(`Error del servidor: ${response.status} - ${errorText.substring(0, 100)}`)
+          }
+        } else {
+          throw new Error(`Error del servidor: ${response.status} - ${errorText.substring(0, 100)}`)
+        }
+      }
+
+      // Verificar el tipo de contenido
+      const contentType = response.headers.get("content-type") || ""
+      if (!contentType.includes("application/json")) {
+        console.error("La respuesta no es JSON:", contentType)
+        let errorText
+        try {
+          errorText = await response.text()
+        } catch (e) {
+          errorText = "Contenido no legible"
+        }
+        throw new Error(`Respuesta inesperada del servidor: ${errorText.substring(0, 100)}`)
+      }
+
+      // Ahora intentamos parsear el JSON con manejo de errores
+      let data
+      try {
+        data = await response.json()
+      } catch (e) {
+        console.error("Error al parsear JSON:", e)
+        throw new Error("Error al procesar la respuesta del servidor. La respuesta no es un JSON válido.")
       }
 
       if (!data.imageUrl) {
@@ -163,7 +207,9 @@ export default function AIIllustratedStamp({
       let errorMessage = "Error desconocido al generar la ilustración"
 
       if (error instanceof Error) {
-        if (error.message.includes("API key")) {
+        if (error.message.includes("JSON")) {
+          errorMessage = "Error al procesar la respuesta del servidor. Por favor, intenta de nuevo."
+        } else if (error.message.includes("API key")) {
           errorMessage = "Error de configuración: API key de OpenAI no configurada correctamente."
         } else if (error.message.includes("429")) {
           errorMessage = "Demasiadas solicitudes a la API de OpenAI. Por favor, intenta más tarde."
@@ -433,6 +479,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 

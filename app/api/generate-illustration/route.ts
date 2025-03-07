@@ -148,16 +148,44 @@ export async function POST(request: Request) {
 
       console.log("Respuesta de OpenAI recibida. Status:", openaiResponse.status)
 
+      // Verificar el tipo de contenido de la respuesta
+      const contentType = openaiResponse.headers.get("content-type") || ""
+      console.log("Tipo de contenido de la respuesta:", contentType)
+
       if (!openaiResponse.ok) {
-        const errorData = await openaiResponse.json().catch((e) => ({ error: "Error parsing response" }))
+        // Intentar obtener el texto de error primero
+        const errorText = await openaiResponse.text()
+        console.error("Texto de error de OpenAI:", errorText)
+
+        // Intentar parsear como JSON si parece ser JSON
+        let errorData
+        if (errorText.trim().startsWith("{")) {
+          try {
+            errorData = JSON.parse(errorText)
+          } catch (e) {
+            errorData = { error: "Error al parsear respuesta", text: errorText }
+          }
+        } else {
+          errorData = { error: "Respuesta no JSON", text: errorText }
+        }
+
         console.error("Error de OpenAI:", JSON.stringify(errorData))
 
         // Activar modo de respaldo para futuras solicitudes si hay un error persistente
         USE_FALLBACK = true
 
-        throw new Error(`Error de OpenAI (${openaiResponse.status}): ${JSON.stringify(errorData)}`)
+        throw new Error(`Error de OpenAI (${openaiResponse.status}): ${errorText.substring(0, 200)}`)
       }
 
+      // Verificar si la respuesta es JSON
+      if (!contentType.includes("application/json")) {
+        console.error("La respuesta no es JSON:", contentType)
+        const textResponse = await openaiResponse.text()
+        console.error("Contenido de respuesta no-JSON:", textResponse.substring(0, 200))
+        throw new Error("La API de OpenAI devolvió un formato inesperado")
+      }
+
+      // Ahora podemos estar más seguros de que es JSON
       const data = await openaiResponse.json()
       console.log("Datos de OpenAI procesados correctamente")
 
@@ -198,6 +226,8 @@ export async function POST(request: Request) {
     )
   }
 }
+
+
 
 
 
