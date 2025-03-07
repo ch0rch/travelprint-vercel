@@ -16,7 +16,6 @@ import {
   Smartphone,
   Square,
   ImageIcon,
-  MonitorSmartphone,
   Crown,
   RefreshCw,
   Lock,
@@ -74,7 +73,7 @@ const stampFormats = [
     name: "Cuadrado (1:1)",
     icon: Square,
     containerClass: "w-full aspect-square",
-    mapClass: "w-full h-[65%]",
+    mapClass: "w-full h-[70%]",
     previewClass: "max-w-[350px] mx-auto",
     premium: false,
   },
@@ -83,7 +82,7 @@ const stampFormats = [
     name: "Vertical (4:5)",
     icon: ImageIcon,
     containerClass: "w-full aspect-[4/5]",
-    mapClass: "w-full h-[70%]",
+    mapClass: "w-full h-[75%]",
     previewClass: "max-w-[280px] mx-auto",
     premium: true,
   },
@@ -92,17 +91,8 @@ const stampFormats = [
     name: "Historia (9:16)",
     icon: Smartphone,
     containerClass: "w-full aspect-[9/16]",
-    mapClass: "w-full h-[75%]",
+    mapClass: "w-full h-[80%]",
     previewClass: "max-w-[220px] mx-auto",
-    premium: true,
-  },
-  {
-    id: "landscape",
-    name: "Horizontal (16:9)",
-    icon: MonitorSmartphone,
-    containerClass: "w-full aspect-[16/9]",
-    mapClass: "w-full h-[60%]",
-    previewClass: "max-w-[350px] mx-auto",
     premium: true,
   },
 ]
@@ -848,6 +838,9 @@ export default function TravelStampGenerator() {
                     <Input
                       id="destination"
                       value={newDestination}
+                      onChange
+                      id="destination"
+                      value={newDestination}
                       onChange={(e) => setNewDestination(e.target.value)}
                       placeholder="Ej: Talca, Constitución, Concepción..."
                       onKeyDown={(e) => e.key === "Enter" && searchDestination()}
@@ -1180,9 +1173,9 @@ export default function TravelStampGenerator() {
                       </div>
                     </div>
 
-                    {/* Contenedor inferior sin margin/padding top y con flex-grow */}
-                    <div className="flex-grow flex flex-col justify-end bg-transparent">
-                      <div className="space-y-2 p-3">
+                    {/* Contenedor inferior con altura fija y mejor distribución */}
+                    <div className="flex-grow flex flex-col justify-between bg-transparent">
+                      <div className="space-y-3 p-4">
                         <div className="flex items-center justify-center">
                           <div className="inline-block px-2 py-1 bg-amber-100/50 rounded-full">
                             <p className={`${textColor} text-[10px] font-medium`}>
@@ -1202,7 +1195,7 @@ export default function TravelStampGenerator() {
                         )}
 
                         {travelTags.length > 0 && (
-                          <div className="flex flex-wrap justify-center gap-1.5 px-2">
+                          <div className="flex flex-wrap justify-center gap-1.5">
                             {travelTags.map((tag) => (
                               <span
                                 key={tag}
@@ -1302,6 +1295,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
