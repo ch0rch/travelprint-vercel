@@ -7,7 +7,7 @@ import { SiteHeader } from "@/components/site-header"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "TravelPrint.me",
+  title: "Recuerdo Viajero",
   description: "Crea estampitas personalizadas de tus aventuras en ruta",
 }
 
@@ -18,6 +18,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
+      <head>
+        <script
+          defer
+          data-website-id="67ca4c1b21c9bfa8fbfdad36"
+          data-domain="travelprint.me"
+          src="https://datafa.st/js/script.js"
+        />
+      </head>
       <body className={inter.className}>
         <SiteHeader />
         {children}
@@ -25,3 +33,5 @@ export default function RootLayout({
     </html>
   )
 }
+
+
