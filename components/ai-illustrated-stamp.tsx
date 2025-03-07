@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Crown, Download, RefreshCw, Sparkles, ImageIcon, AlertCircle, Clock } from "lucide-react"
 import Image from "next/image"
 import { isPremiumUser } from "@/utils/premium-storage"
+import OpenAIDiagnostics from "./openai-diagnostics"
 
 interface AIIllustratedStampProps {
   tripName: string
@@ -90,6 +91,7 @@ export default function AIIllustratedStamp({
   const [isTimeoutError, setIsTimeoutError] = useState(false)
   const isPremium = isPremiumUser()
   const [retryCount, setRetryCount] = useState(0)
+  const [showDiagnostics, setShowDiagnostics] = useState(false)
 
   // Función para generar la estampita ilustrada
   const generateIllustration = async (retry = false) => {
@@ -476,6 +478,24 @@ export default function AIIllustratedStamp({
             </div>
           </div>
         )}
+        {error && (
+          <div className="mt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDiagnostics(!showDiagnostics)}
+              className="w-full text-xs"
+            >
+              {showDiagnostics ? "Ocultar diagnóstico" : "Mostrar diagnóstico técnico"}
+            </Button>
+
+            {showDiagnostics && (
+              <div className="mt-2">
+                <OpenAIDiagnostics />
+              </div>
+            )}
+          </div>
+        )}
 
         {isTimeoutError && generatedImage && (
           <div className="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200 flex items-start">
@@ -567,6 +587,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 

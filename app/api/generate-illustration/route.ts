@@ -15,13 +15,37 @@ const SAMPLE_IMAGES = {
 // Modo de respaldo si la API de OpenAI falla
 let USE_FALLBACK = false
 
+// Función para verificar si la API key de OpenAI está configurada
+function isOpenAIKeyConfigured() {
+  const apiKey = process.env.OPENAI_API_KEY
+
+  // Verificar si la API key existe y tiene un formato válido (comienza con "sk-")
+  const isValid = apiKey && typeof apiKey === "string" && apiKey.startsWith("sk-")
+
+  if (!isValid) {
+    console.error("API key de OpenAI no configurada correctamente:", apiKey ? "Formato incorrecto" : "No existe")
+  }
+
+  return isValid
+}
+
 export async function POST(request: Request) {
   try {
     console.log("Recibiendo solicitud para generar ilustración")
 
+    // Verificar si la API key está configurada correctamente
+    const isApiKeyValid = isOpenAIKeyConfigured()
+    console.log("¿API key de OpenAI válida?", isApiKeyValid)
+
+    if (!isApiKeyValid) {
+      console.log("Usando modo de respaldo debido a API key inválida")
+      USE_FALLBACK = true
+    }
+
     const { prompt, style, creativity, isPremium } = await request.json()
 
     console.log("Datos recibidos:", { style, creativity, isPremium })
+    console.log("Modo de respaldo activo:", USE_FALLBACK)
 
     if (!prompt) {
       return NextResponse.json({ error: "Se requiere un prompt" }, { status: 400 })
@@ -39,11 +63,10 @@ export async function POST(request: Request) {
     }
 
     // Usar el modo de respaldo inmediatamente si:
-    // 1. No hay API key
+    // 1. No hay API key válida
     // 2. El modo de respaldo está activado por errores previos
     // 3. Estamos en un entorno de desarrollo (opcional, para pruebas rápidas)
-    const apiKey = process.env.OPENAI_API_KEY
-    const useImmediateFallback = !apiKey || USE_FALLBACK || process.env.NODE_ENV === "development"
+    const useImmediateFallback = !isApiKeyValid || USE_FALLBACK || process.env.NODE_ENV === "development"
 
     if (useImmediateFallback) {
       console.log("Usando modo de respaldo inmediato con imágenes de ejemplo")
@@ -56,6 +79,13 @@ export async function POST(request: Request) {
       return NextResponse.json({
         imageUrl,
         note: "Usando imagen de ejemplo (modo de respaldo)",
+        debug: {
+          reason: !isApiKeyValid
+            ? "API key inválida"
+            : USE_FALLBACK
+              ? "Modo de respaldo activado por errores previos"
+              : "Entorno de desarrollo",
+        },
       })
     }
 
@@ -123,24 +153,35 @@ export async function POST(request: Request) {
     `.trim()
 
     console.log("Configurando solicitud a OpenAI con timeout")
+    console.log("API Key (primeros 5 caracteres):", process.env.OPENAI_API_KEY?.substring(0, 5) + "...")
 
     try {
       // Ejecutar la solicitud a OpenAI con un límite de tiempo
+      const apiKey = process.env.OPENAI_API_KEY
+
+      console.log("Preparando solicitud a OpenAI")
+
+      const requestBody = {
+        model: "dall-e-3",
+        prompt: enhancedPrompt,
+        n: 1,
+        size: "1024x1024",
+        quality: "standard", // Cambiar a "standard" en lugar de "hd" para respuestas más rápidas
+        style: "vivid",
+      }
+
+      console.log("Cuerpo de la solicitud:", JSON.stringify(requestBody))
+
       const openaiPromise = fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({
-          model: "dall-e-3",
-          prompt: enhancedPrompt,
-          n: 1,
-          size: "1024x1024",
-          quality: "standard", // Cambiar a "standard" en lugar de "hd" para respuestas más rápidas
-          style: "vivid",
-        }),
+        body: JSON.stringify(requestBody),
       })
+
+      console.log("Solicitud enviada a OpenAI, esperando respuesta...")
 
       // Usar Promise.race para implementar el timeout
       const openaiResponse = await Promise.race([openaiPromise, timeoutPromise])
@@ -160,6 +201,8 @@ export async function POST(request: Request) {
 
       // Verificar si la respuesta es JSON
       const contentType = openaiResponse.headers.get("content-type") || ""
+      console.log("Tipo de contenido de la respuesta:", contentType)
+
       if (!contentType.includes("application/json")) {
         console.error("La respuesta no es JSON:", contentType)
         USE_FALLBACK = true
@@ -169,6 +212,7 @@ export async function POST(request: Request) {
       // Ahora podemos estar más seguros de que es JSON
       const data = await openaiResponse.json()
       console.log("Datos de OpenAI procesados correctamente")
+      console.log("Estructura de la respuesta:", JSON.stringify(data, null, 2))
 
       const imageUrl = data.data?.[0]?.url
 
@@ -177,6 +221,7 @@ export async function POST(request: Request) {
         throw new Error("No se pudo generar la imagen: URL no encontrada en respuesta")
       }
 
+      console.log("URL de imagen generada:", imageUrl.substring(0, 50) + "...")
       return NextResponse.json({ imageUrl })
     } catch (openaiError) {
       console.error("Error en la llamada a OpenAI:", openaiError)
@@ -194,6 +239,10 @@ export async function POST(request: Request) {
         imageUrl: fallbackImageUrl,
         note: "Usando imagen de ejemplo debido a un error con OpenAI",
         error: openaiError instanceof Error ? openaiError.message : String(openaiError),
+        debug: {
+          errorType: openaiError instanceof Error ? openaiError.name : "Unknown",
+          stack: openaiError instanceof Error ? openaiError.stack : undefined,
+        },
       })
     }
   } catch (error: any) {
@@ -230,6 +279,10 @@ export async function POST(request: Request) {
         imageUrl: fallbackImageUrl,
         note: "Usando imagen de ejemplo debido a un tiempo de espera",
         error: "La solicitud a OpenAI ha excedido el tiempo de espera",
+        debug: {
+          errorType: "TimeoutError",
+          originalError: error.message,
+        },
       })
     }
 
@@ -239,11 +292,17 @@ export async function POST(request: Request) {
         error: "Error al generar la ilustración",
         details: error.message || String(error),
         stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+        debug: {
+          errorType: error.name,
+          message: error.message,
+        },
       },
       { status: 500 },
     )
   }
 }
+
+
 
 
 
