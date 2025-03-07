@@ -12,6 +12,11 @@ interface DiscoverPremiumModalProps {
 export default function DiscoverPremiumModal({ onClose, onPurchase }: DiscoverPremiumModalProps) {
   const benefits = [
     {
+      icon: Sparkles,
+      title: "Ilustraciones con IA",
+      description: "Genera versiones artísticas ilustradas únicas de tus estampitas",
+    },
+    {
       icon: Image,
       title: "Formatos adicionales",
       description: "Vertical, horizontal y formato historia para redes sociales",
@@ -84,6 +89,18 @@ export default function DiscoverPremiumModal({ onClose, onPurchase }: DiscoverPr
             ))}
           </div>
 
+          {/* Añade esto después de la lista de beneficios */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+            <h4 className="font-medium text-amber-900 flex items-center mb-2">
+              <Sparkles className="h-4 w-4 text-amber-500 mr-2" />
+              ¡NUEVO! Estampitas Ilustradas con IA
+            </h4>
+            <p className="text-sm text-amber-700 mb-2">
+              Transforma tus rutas en hermosas ilustraciones artísticas en diferentes estilos: acuarela, vintage,
+              minimalista, anime y más. Una forma única de preservar tus recuerdos de viaje.
+            </p>
+          </div>
+
           {/* Sección de precio */}
           <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg p-4 md:p-6 mb-4 md:mb-6">
             <div className="flex items-baseline justify-center mb-2">
@@ -122,7 +139,7 @@ export default function DiscoverPremiumModal({ onClose, onPurchase }: DiscoverPr
               ¡Mejora tu experiencia hoy mismo!
             </p>
             <p className="text-xs text-muted-foreground">
-              Pago único. Sin renovación automática.
+              Pago único. Sin renovación automática. Satisfacción garantizada.
             </p>
           </div>
         </CardContent>
@@ -130,6 +147,8 @@ export default function DiscoverPremiumModal({ onClose, onPurchase }: DiscoverPr
     </div>
   )
 }
+
+
 
 
 

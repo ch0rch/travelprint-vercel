@@ -31,6 +31,7 @@ import PremiumBadge from "@/components/premium-badge"
 import ExpiryReminderModal from "@/components/expiry-reminder-modal"
 import ActivatePremiumModal from "@/components/activate-premium-modal"
 import ShareModal from "@/components/share-modal"
+import AIIllustratedStamp from "./ai-illustrated-stamp"
 
 // Normalmente usaríamos una variable de entorno, pero para el prototipo usamos un token público
 mapboxgl.accessToken = "pk.eyJ1Ijoiam9yamVyb2phcyIsImEiOiJjbTd2eG42bXYwMTNlMm1vcWRycWpicmRhIn0.hDwomrUtCTWGe0gtLHil2Q"
@@ -121,6 +122,7 @@ export default function TravelStampGenerator() {
   const [textColor, setTextColor] = useState(pastelColors[0].textColor)
   const [stampFormat, setStampFormat] = useState("square")
   const [showShareModal, setShowShareModal] = useState(false)
+  const [showAITab, setShowAITab] = useState(false)
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const previewMapRef = useRef<HTMLDivElement>(null)
@@ -813,11 +815,22 @@ export default function TravelStampGenerator() {
     )
   }
 
+  const downloadAIGeneratedImage = (imageUrl: string) => {
+    // Crear un enlace temporal y descargar la imagen
+    const link = document.createElement("a")
+    link.href = imageUrl
+    link.download = `${tripName.replace(/\s+/g, "-").toLowerCase()}-ilustracion.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-6">
         <Card>
           <CardContent className="p-6">
+            <h2 className="text-xl font-bold mb-4">Generador de Estampitas</h2>
             <h2 className="text-xl font-bold mb-4">Generador de Estampitas</h2>
             <div className="flex flex-col md:flex-row gap-4 mb-4">
               <div className="flex-1">
@@ -1094,59 +1107,139 @@ export default function TravelStampGenerator() {
           <CardContent className="p-6">
             <h2>Vista Previa</h2>
             {isPremium && <PremiumBadge onRenew={openLemonSqueezyCheckout} />}
+
             {destinations.length < 2 ? (
               <div className="border-2 border-dashed border-amber-200 rounded-lg p-8 text-center">
                 <MapPin className="h-12 w-12 mx-auto text-amber-300 mb-2" />
                 <p className="text-amber-800">Añade al menos dos destinos para generar tu estampita</p>
               </div>
             ) : (
-              <div className={getPreviewClasses()} ref={previewContainerRef}>
-                <div
-                  className={`border-2 rounded-lg overflow-hidden ${borderColor} ${getFormatClasses()} relative shadow-xl`}
-                  style={{ backgroundColor: backgroundColor }}
-                >
-                  {/* Esquinas decorativas */}
-                  <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-amber-800/20 rounded-tl-lg" />
-                  <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-amber-800/20 rounded-tr-lg" />
-                  <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-amber-800/20 rounded-bl-lg" />
-                  <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-amber-800/20 rounded-br-lg" />
+              <Tabs defaultValue="map">
+                <TabsList className="w-full mb-4">
+                  <TabsTrigger value="map">Mapa</TabsTrigger>
+                  <TabsTrigger value="ai" onClick={() => setShowAITab(true)}>
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Ilustración IA
+                  </TabsTrigger>
+                </TabsList>
 
-                  {/* Contenido */}
-                  <div className="relative z-10 flex flex-col h-full">
-                    {/* Contenedor del mapa sin margin/padding bottom */}
-                    <div ref={previewMapRef} className={`${getMapClasses()} relative`} />
+                <TabsContent value="map">
+                  <div className={getPreviewClasses()} ref={previewContainerRef}>
+                    <div
+                      className={`border-2 rounded-lg overflow-hidden ${borderColor} ${getFormatClasses()} relative shadow-xl`}
+                      style={{ backgroundColor: backgroundColor }}
+                    >
+                      {/* Esquinas decorativas */}
+                      <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-amber-800/20 rounded-tl-lg" />
+                      <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-amber-800/20 rounded-tr-lg" />
+                      <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-amber-800/20 rounded-bl-lg" />
+                      <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-amber-800/20 rounded-br-lg" />
 
-                    {/* Contenedor inferior con altura fija y mejor distribución */}
-                    <div className="flex-grow flex flex-col justify-between bg-transparent">
-                      <div className="space-y-3 p-4">
-                        <div className="text-center">
-                          <h3 className={`font-serif font-bold text-lg tracking-wide ${textColor}`}>{tripName}</h3>
-                          {tripDate && <p className={`text-sm ${textColor} font-medium opacity-75 mt-1`}>{tripDate}</p>}
-                        </div>
+                      {/* Contenido */}
+                      <div className="relative z-10 flex flex-col h-full">
+                        {/* Contenedor del mapa sin margin/padding bottom */}
+                        <div ref={previewMapRef} className={`${getMapClasses()} relative`} />
 
-                        {tripComment && isPremium && (
-                          <div className="px-2">
-                            <div className="relative">
-                              <span className={`absolute left-0 top-0 ${textColor} opacity-30 text-lg`}>"</span>
-                              <p
-                                className={`italic text-[10px] ${textColor} leading-relaxed px-4 break-words max-w-full`}
-                              >
-                                {tripComment}
-                              </p>
-                              <span className={`absolute right-0 bottom-0 ${textColor} opacity-30 text-lg`}>"</span>
+                        {/* Contenedor inferior con altura fija y mejor distribución */}
+                        <div className="flex-grow flex flex-col justify-between bg-transparent">
+                          <div className="space-y-3 p-4">
+                            <div className="text-center">
+                              <h3 className={`font-serif font-bold text-lg tracking-wide ${textColor}`}>{tripName}</h3>
+                              {tripDate && (
+                                <p className={`text-sm ${textColor} font-medium opacity-75 mt-1`}>{tripDate}</p>
+                              )}
                             </div>
-                          </div>
-                        )}
-                      </div>
 
-                      <div className="mt-auto border-t border-amber-800/10 p-2 flex justify-between items-center">
-                        <span className="text-[8px] opacity-70">travelprint.me</span>
-                        <span className="text-[8px] font-medium opacity-70">Mi recuerdo de viaje</span>
+                            {tripComment && isPremium && (
+                              <div className="px-2">
+                                <div className="relative">
+                                  <span className={`absolute left-0 top-0 ${textColor} opacity-30 text-lg`}>"</span>
+                                  <p
+                                    className={`italic text-[10px] ${textColor} leading-relaxed px-4 break-words max-w-full`}
+                                  >
+                                    {tripComment}
+                                  </p>
+                                  <span className={`absolute right-0 bottom-0 ${textColor} opacity-30 text-lg`}>"</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="mt-auto border-t border-amber-800/10 p-2 flex justify-between items-center">
+                            <span className="text-[8px] opacity-70">travelprint.me</span>
+                            <span className="text-[8px] font-medium opacity-70">Mi recuerdo de viaje</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
+                </TabsContent>
+
+                <TabsContent value="ai">
+                  {showAITab && (
+                    <>
+                      {!isPremium ? (
+                        <div className="space-y-4">
+                          <div className="border-2 border-amber-200 rounded-lg overflow-hidden">
+                            <div className="aspect-square bg-amber-50 flex flex-col items-center justify-center p-4">
+                              <Sparkles className="h-12 w-12 text-amber-500 mb-3" />
+                              <h3 className="text-lg font-bold text-amber-800 mb-2">Estampitas Ilustradas con IA</h3>
+                              <p className="text-sm text-amber-700 text-center mb-4">
+                                Transforma tus rutas en hermosas ilustraciones artísticas generadas con inteligencia
+                                artificial.
+                              </p>
+
+                              {/* Mostrar ejemplos de estilos */}
+                              <div className="grid grid-cols-2 gap-2 w-full max-w-xs mb-4">
+                                <div className="bg-white rounded border border-amber-200 p-2">
+                                  <div className="aspect-square bg-amber-100 rounded flex items-center justify-center mb-1">
+                                    <span className="text-xs text-amber-800">Acuarela</span>
+                                  </div>
+                                </div>
+                                <div className="bg-white rounded border border-amber-200 p-2">
+                                  <div className="aspect-square bg-amber-100 rounded flex items-center justify-center mb-1">
+                                    <span className="text-xs text-amber-800">Vintage</span>
+                                  </div>
+                                </div>
+                                <div className="bg-white rounded border border-amber-200 p-2">
+                                  <div className="aspect-square bg-amber-100 rounded flex items-center justify-center mb-1">
+                                    <span className="text-xs text-amber-800">Minimalista</span>
+                                  </div>
+                                </div>
+                                <div className="bg-white rounded border border-amber-200 p-2">
+                                  <div className="aspect-square bg-amber-100 rounded flex items-center justify-center mb-1">
+                                    <span className="text-xs text-amber-800">Anime</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <Button
+                                onClick={() => setShowPremiumModal(true)}
+                                className="w-full bg-gradient-to-r from-amber-500 to-amber-700"
+                              >
+                                <Crown className="h-4 w-4 mr-2" />
+                                Desbloquear con Premium
+                              </Button>
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground text-center">
+                            Característica exclusiva para usuarios premium. Crea ilustraciones únicas de tus viajes.
+                          </p>
+                        </div>
+                      ) : (
+                        <AIIllustratedStamp
+                          tripName={tripName}
+                          destinations={destinations}
+                          tripDate={tripDate}
+                          tripComment={tripComment}
+                          onDownload={downloadAIGeneratedImage}
+                          onOpenPremium={() => setShowPremiumModal(true)}
+                        />
+                      )}
+                    </>
+                  )}
+                </TabsContent>
+              </Tabs>
             )}
             <div className="mt-6 space-y-3">
               <Button
@@ -1197,6 +1290,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
