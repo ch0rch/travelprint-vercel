@@ -250,8 +250,8 @@ export default function ProgramaAfiliados() {
             <h3 className="font-semibold text-amber-900 mb-3">¿Tienes preguntas sobre el programa?</h3>
             <p className="text-amber-800 mb-4">
               Contáctanos en{" "}
-              <a href="mailto:afiliados@travelprint.me" className="text-amber-600 underline">
-                afiliados@travelprint.me
+              <a href="mailto:hi@travelprint.me" className="text-amber-600 underline">
+                hi@travelprint.me
               </a>{" "}
               y te responderemos a la brevedad.
             </p>

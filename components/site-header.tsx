@@ -54,6 +54,9 @@ export function SiteHeader() {
           <Link href="/carta-del-creador" className="text-amber-800 hover:text-amber-600 text-sm mr-2">
             Nuestra historia
           </Link>
+          <Link href="/programa-afiliados" className="text-amber-800 hover:text-amber-600 text-sm mr-2">
+            Programa de Afiliados
+          </Link>
 
           {!isPremium && (
             <>
@@ -87,6 +90,12 @@ export function SiteHeader() {
                   className="text-amber-800 hover:text-amber-600 text-sm font-medium px-2 py-2 rounded-md hover:bg-amber-50"
                 >
                   Nuestra historia
+                </Link>
+                <Link
+                  href="/programa-afiliados"
+                  className="text-amber-800 hover:text-amber-600 text-sm font-medium px-2 py-2 rounded-md hover:bg-amber-50"
+                >
+                  Programa de Afiliados
                 </Link>
 
                 {!isPremium ? (
@@ -133,6 +142,8 @@ export function SiteHeader() {
     </header>
   )
 }
+
+
 
 
 
