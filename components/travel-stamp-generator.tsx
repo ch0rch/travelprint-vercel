@@ -829,8 +829,7 @@ export default function TravelStampGenerator() {
                       value={newDestination}
                       onChange={(e) => setNewDestination(e.target.value)}
                       placeholder="Ej: Talca, Constitución, Concepción..."
-                      on
-                      placeholder="Ej: Talca, Constitución, Concepción..."
+                      onKeyDown={(e                      placeholder="Ej: Talca, Constitución, Concepción..."\
                       onKeyDown={(e) => e.key === "Enter" && searchDestination()}
                     />
                     <Button onClick={searchDestination} disabled={isSearching || !newDestination.trim()}>
@@ -1112,29 +1111,20 @@ export default function TravelStampGenerator() {
                   {/* Contenido */}
                   <div className="relative z-10 flex flex-col h-full">
                     {/* Contenedor del mapa sin margin/padding bottom */}
-                    <div ref={previewMapRef} className={`${getMapClasses()} relative`}>
-                      <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-10"></div>
-                      <div className="absolute top-0 left-0 right-0 p-3 text-center z-20">
-                        <h3 className="font-serif font-bold text-lg tracking-wide text-white drop-shadow-md">
-                          {tripName}
-                        </h3>
-                        {tripDate && (
-                          <p className="text-sm text-white font-medium tracking-wider drop-shadow-sm mt-1">
-                            {tripDate}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                    <div ref={previewMapRef} className={`${getMapClasses()} relative`} />
 
                     {/* Contenedor inferior con altura fija y mejor distribución */}
                     <div className="flex-grow flex flex-col justify-between bg-transparent">
                       <div className="space-y-3 p-4">
-                        <div className="flex items-center justify-center">
-                          <div className="inline-block px-2 py-1 bg-amber-100/50 rounded-full">
-                            <p className={`${textColor} text-[10px] font-medium`}>
-                              <strong>{calculateTotalDistance()}&nbsp;km</strong>&nbsp;recorridos
+                        <div className="text-center">
+                          <h3 className={`font-serif font-bold text-lg tracking-wide ${textColor}`}>
+                            {tripName}
+                          </h3>
+                          {tripDate && (
+                            <p className={`text-sm ${textColor} font-medium opacity-75 mt-1`}>
+                              {tripDate}
                             </p>
-                          </div>
+                          )}
                         </div>
 
                         {tripComment && isPremium && (
@@ -1210,6 +1200,10 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
+
+
 
 
 
