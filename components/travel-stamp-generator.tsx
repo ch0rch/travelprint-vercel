@@ -17,7 +17,6 @@ import {
   Square,
   ImageIcon,
   Crown,
-  RefreshCw,
   Lock,
   Sparkles,
   Palette,
@@ -1077,6 +1076,13 @@ export default function TravelStampGenerator() {
                 </Tabs>
               </CardContent>
             </Card>
+            {/* Botón de compartir */}
+            <div className="mt-6">
+              <Button className="w-full" variant="outline" onClick={() => setShowShareModal(true)}>
+                <Share2 className="h-4 w-4 mr-2" />
+                Compartir con amigos
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -1183,50 +1189,16 @@ export default function TravelStampGenerator() {
                   Activar Premium
                 </Button>
               )}
-              <Button className="w-full" variant="outline" onClick={() => setShowShareModal(true)}>
-                <Share2 className="h-4 w-4 mr-2" />
-                Compartir con amigos
-              </Button>
-              <div className="mt-2 text-center">
-                <button
-                  onClick={refreshPreview}
-                  className="text-xs text-amber-600 hover:text-amber-700 flex items-center justify-center mx-auto"
-                >
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  Actualizar vista previa
-                </button>
-              </div>
-              <div className="mt-4 border-t pt-4">
-                <h3 className="text-sm font-medium mb-2 flex items-center">
-                  <Crown className="h-4 w-4 text-amber-500 mr-2" />
-                  Características Premium
-                </h3>
-                <ul className="text-xs text-muted-foreground space-y-1">
-                  <li className="flex items-center">
-                    <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
-                    Formatos adicionales (vertical, horizontal, historia)
-                  </li>
-                  <li className="flex items-center">
-                    <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
-                    Estilos de mapa premium (satélite, nocturno)
-                  </li>
-                  <li className="flex items-center">
-                    <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
-                    Comentarios personalizados
-                  </li>
-                  <li className="flex items-center">
-                    <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
-                    Descarga sin marca de agua
-                  </li>
-                  <li className="flex items-center">
-                    <Sparkles className="h-3 w-3 text-amber-500 mr-1" />
-                    Alta resolución (4x)
-                  </li>
-                </ul>
-              </div>
             </div>
           </CardContent>
         </Card>
+        {/* Botón de compartir */}
+        <div className="mt-6">
+          <Button className="w-full" variant="outline" onClick={() => setShowShareModal(true)}>
+            <Share2 className="h-4 w-4 mr-2" />
+            Compartir con amigos
+          </Button>
+        </div>
       </div>
 
       {renderPremiumModal()}
@@ -1238,6 +1210,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
