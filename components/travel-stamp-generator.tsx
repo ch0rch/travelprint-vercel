@@ -828,9 +828,9 @@ export default function TravelStampGenerator() {
                       onChange={(e) => setNewDestination(e.target.value)}
                       placeholder="Ej: Talca, Constitución, Concepción..."
                       onKeyDown={(e) => e.key === "Enter" && searchDestination()}
+                      onKeyDown={(e) => e.key === "Enter" && searchDestination()}
                     />
                     <Button onClick={searchDestination} disabled={isSearching || !newDestination.trim()}>
-                      <Plus className                      disabled={isSearching || !newDestination.trim()}>
                       <Plus className="h-4 w-4 mr-1" />
                       Añadir
                     </Button>
@@ -1131,7 +1131,9 @@ export default function TravelStampGenerator() {
                           <div className="px-2">
                             <div className="relative">
                               <span className={`absolute left-0 top-0 ${textColor} opacity-30 text-lg`}>"</span>
-                              <p className={`italic text-[10px] ${textColor} leading-relaxed px-4 break-words max-w-full`}>
+                              <p
+                                className={`italic text-[10px] ${textColor} leading-relaxed px-4 break-words max-w-full`}
+                              >
                                 {tripComment}
                               </p>
                               <span className={`absolute right-0 bottom-0 ${textColor} opacity-30 text-lg`}>"</span>
@@ -1227,6 +1229,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
