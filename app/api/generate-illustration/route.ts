@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server"
-import OpenAI from "openai"
 
-// Inicializar OpenAI con la clave de API
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+// Imágenes de ejemplo para diferentes estilos (para pruebas sin API)
+const SAMPLE_IMAGES = {
+  watercolor: "https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=1000&auto=format&fit=crop",
+  "vintage-postcard": "https://images.unsplash.com/photo-1516466723877-e4ec1d736c8a?q=80&w=1000&auto=format&fit=crop",
+  "pencil-sketch": "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=1000&auto=format&fit=crop",
+  "digital-art": "https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=1000&auto=format&fit=crop",
+  "oil-painting": "https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=1000&auto=format&fit=crop",
+  minimalist: "https://images.unsplash.com/photo-1605106702734-205df224ecce?q=80&w=1000&auto=format&fit=crop",
+  geometric: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=1000&auto=format&fit=crop",
+  anime: "https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1000&auto=format&fit=crop",
+}
 
 export async function POST(request: Request) {
   try {
@@ -25,38 +31,15 @@ export async function POST(request: Request) {
       )
     }
 
-    // Configurar modelo y calidad según nivel premium
-    const model = isPremium ? "dall-e-3" : "dall-e-2"
-    const quality = isPremium ? "hd" : "standard"
-    const size = isPremium ? "1024x1024" : "512x512"
+    console.log("Simulando generación de imagen para estilo:", style)
 
-    // Añadir instrucciones específicas según el estilo
-    let enhancedPrompt = `${prompt} Estilo: ${style}.`
+    // Simular un tiempo de procesamiento
+    await new Promise((resolve) => setTimeout(resolve, 2000))
 
-    if (isPremium) {
-      enhancedPrompt += " Alta calidad, detalles finos, colores vibrantes."
-    }
-
-    console.log("Generando imagen con prompt:", enhancedPrompt)
-
-    // Generar imagen con DALL-E
-    const response = await openai.images.generate({
-      model,
-      prompt: enhancedPrompt,
-      n: 1,
-      size: size as any,
-      quality: quality as any,
-    })
-
-    // Obtener la URL de la imagen generada
-    const imageUrl = response.data[0].url
-
-    if (!imageUrl) {
-      throw new Error("No se pudo generar la imagen")
-    }
-
-    // Opcionalmente, aquí podrías guardar la imagen en tu propio almacenamiento
-    // y devolver esa URL en lugar de la URL temporal de OpenAI
+    // Devolver una imagen de ejemplo basada en el estilo
+    const imageUrl =
+      SAMPLE_IMAGES[style as keyof typeof SAMPLE_IMAGES] ||
+      "https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=1000&auto=format&fit=crop"
 
     return NextResponse.json({ imageUrl })
   } catch (error: any) {
@@ -70,4 +53,6 @@ export async function POST(request: Request) {
     )
   }
 }
+
+
 

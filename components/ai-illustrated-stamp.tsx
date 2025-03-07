@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Crown, Download, RefreshCw, Sparkles, ImageIcon } from "lucide-react"
+import { Crown, Download, RefreshCw, Sparkles, ImageIcon, AlertCircle } from "lucide-react"
 import Image from "next/image"
 import { isPremiumUser } from "@/utils/premium-storage"
 
@@ -46,6 +46,7 @@ export default function AIIllustratedStamp({
   const [creativity, setCreativity] = useState([0.7])
   const [additionalPrompt, setAdditionalPrompt] = useState("")
   const [isRegenerating, setIsRegenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const isPremium = isPremiumUser()
 
   // Función para generar la estampita ilustrada
@@ -60,6 +61,7 @@ export default function AIIllustratedStamp({
 
     setIsGenerating(true)
     setIsRegenerating(false)
+    setError(null)
 
     try {
       // Construir la descripción geográfica y contextual del viaje
@@ -79,9 +81,6 @@ export default function AIIllustratedStamp({
         Formato cuadrado, con aspecto de estampita o sello de viaje.
       `
 
-      // Simulamos una llamada a la API (aquí implementarías la llamada real)
-      // await new Promise(resolve => setTimeout(resolve, 3000))
-
       // Llamada a la API de generación de imágenes
       const response = await fetch("/api/generate-illustration", {
         method: "POST",
@@ -97,14 +96,15 @@ export default function AIIllustratedStamp({
       })
 
       if (!response.ok) {
-        throw new Error("Error al generar la ilustración")
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Error al generar la ilustración")
       }
 
       const data = await response.json()
       setGeneratedImage(data.imageUrl)
     } catch (error) {
       console.error("Error generando la ilustración:", error)
-      // En una implementación real, mostrarías un mensaje de error al usuario
+      setError(error instanceof Error ? error.message : "Error desconocido al generar la ilustración")
     } finally {
       setIsGenerating(false)
     }
@@ -260,6 +260,13 @@ export default function AIIllustratedStamp({
           </TabsContent>
         </Tabs>
 
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200 flex items-start">
+            <AlertCircle className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
+
         <div className="mt-6">
           {!generatedImage ? (
             <Button
@@ -337,4 +344,6 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
