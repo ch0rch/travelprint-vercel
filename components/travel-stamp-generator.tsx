@@ -22,6 +22,8 @@ import {
   Lock,
   Sparkles,
   Palette,
+  Tag,
+  X,
 } from "lucide-react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
@@ -72,7 +74,7 @@ const stampFormats = [
     name: "Cuadrado (1:1)",
     icon: Square,
     containerClass: "w-full aspect-square",
-    mapClass: "w-full h-[260px]",
+    mapClass: "w-full h-[320px]",
     previewClass: "max-w-[350px] mx-auto",
     premium: false,
   },
@@ -81,7 +83,7 @@ const stampFormats = [
     name: "Vertical (4:5)",
     icon: ImageIcon,
     containerClass: "w-full aspect-[4/5]",
-    mapClass: "w-full h-[340px]",
+    mapClass: "w-full h-[400px]",
     previewClass: "max-w-[280px] mx-auto",
     premium: true,
   },
@@ -90,7 +92,7 @@ const stampFormats = [
     name: "Historia (9:16)",
     icon: Smartphone,
     containerClass: "w-full aspect-[9/16]",
-    mapClass: "w-full h-[400px]",
+    mapClass: "w-full h-[480px]",
     previewClass: "max-w-[220px] mx-auto",
     premium: true,
   },
@@ -99,7 +101,7 @@ const stampFormats = [
     name: "Horizontal (16:9)",
     icon: MonitorSmartphone,
     containerClass: "w-full aspect-[16/9]",
-    mapClass: "w-full h-[240px]",
+    mapClass: "w-full h-[300px]",
     previewClass: "max-w-[350px] mx-auto",
     premium: true,
   },
@@ -129,6 +131,8 @@ export default function TravelStampGenerator() {
   const [borderColor, setBorderColor] = useState(pastelColors[0].borderColor)
   const [textColor, setTextColor] = useState(pastelColors[0].textColor)
   const [stampFormat, setStampFormat] = useState("square")
+  const [newTag, setNewTag] = useState("")
+  const [travelTags, setTravelTags] = useState<string[]>([])
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const previewMapRef = useRef<HTMLDivElement>(null)
@@ -819,6 +823,17 @@ export default function TravelStampGenerator() {
     )
   }
 
+  const handleAddTag = () => {
+    if (newTag.trim() && travelTags.length < 3) {
+      setTravelTags([...travelTags, newTag.trim()])
+      setNewTag("")
+    }
+  }
+
+  const handleRemoveTag = (index: number) => {
+    setTravelTags(travelTags.filter((_, i) => i !== index))
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-6">
@@ -1027,6 +1042,48 @@ export default function TravelStampGenerator() {
                           disabled={!isPremium}
                         />
                       </div>
+                      <div>
+                        <Label htmlFor="travel-tags" className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <Tag className="h-4 w-4 mr-2" />
+                            Etiquetas de viaje
+                          </div>
+                          <span className="text-xs text-muted-foreground">Opcional</span>
+                        </Label>
+                        <div className="mt-2 space-y-2">
+                          <div className="flex gap-2">
+                            <Input
+                              id="travel-tag"
+                              placeholder="Añade una etiqueta (ej: Naturaleza, Aventura...)"
+                              value={newTag}
+                              onChange={(e) => setNewTag(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
+                            />
+                            <Button variant="outline" size="icon" onClick={handleAddTag} disabled={!newTag.trim()}>
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          {travelTags.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 p-2 border rounded-md">
+                              {travelTags.map((tag, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center gap-1 bg-amber-50 text-amber-800 px-2 py-1 rounded-full text-xs border border-amber-200"
+                                >
+                                  <span>{tag}</span>
+                                  <button
+                                    onClick={() => handleRemoveTag(index)}
+                                    className="text-amber-500 hover:text-amber-700"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </TabsContent>
 
@@ -1102,22 +1159,25 @@ export default function TravelStampGenerator() {
 
                   {/* Contenido */}
                   <div className="relative z-10 flex flex-col h-full">
-                    <div className="p-2 text-center space-y-0.5">
-                      <h3 className={`font-serif font-bold text-base tracking-wide ${textColor}`}>{tripName}</h3>
-                      {tripDate && <p className={`text-[10px] ${textColor} font-medium tracking-wider`}>{tripDate}</p>}
+                    <div ref={previewMapRef} className={getMapClasses()} style={{ position: "relative" }}>
+                      <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-10"></div>
+                      <div className="absolute top-0 left-0 right-0 p-2 text-center z-20">
+                        <h3 className="font-serif font-bold text-base tracking-wide text-white">{tripName}</h3>
+                        {tripDate && <p className="text-[10px] text-white font-medium tracking-wider">{tripDate}</p>}
+                      </div>
                     </div>
 
-                    <div ref={previewMapRef} className={getMapClasses()} />
-
-                    <div className="p-2 text-center space-y-1.5 flex-1 flex flex-col justify-end">
-                      <div className="inline-block px-2 py-0.5 bg-amber-100/50 rounded-full">
-                        <p className={`${textColor} text-[10px] font-medium`}>
-                          <strong>{calculateTotalDistance()}&nbsp;km</strong>&nbsp;recorridos
-                        </p>
+                    <div className="p-2 space-y-1.5 flex-1 flex flex-col justify-end">
+                      <div className="flex items-center justify-center">
+                        <div className="inline-block px-1.5 py-0.5 bg-amber-100/50 rounded-full">
+                          <p className={`${textColor} text-[9px] font-medium`}>
+                            <strong>{calculateTotalDistance()}&nbsp;km</strong>&nbsp;recorridos
+                          </p>
+                        </div>
                       </div>
 
                       {tripComment && isPremium && (
-                        <div className="mt-1 px-3">
+                        <div className="mt-1 px-1.5">
                           <div className="relative">
                             <span className={`absolute left-0 top-0 ${textColor} opacity-30 text-base`}>"</span>
                             <p className={`italic text-[9px] ${textColor} leading-snug px-4`}>{tripComment}</p>
@@ -1125,6 +1185,24 @@ export default function TravelStampGenerator() {
                           </div>
                         </div>
                       )}
+
+                      {travelTags.length > 0 && (
+                        <div className="flex flex-wrap justify-center gap-1 mt-0.5">
+                          {travelTags.map((tag) => (
+                            <span
+                              key={tag}
+                              className={`text-[8px] px-1.5 py-0.5 rounded-full bg-amber-100/80 text-amber-800 border border-amber-200`}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="mt-auto pt-0.5 text-center border-t border-amber-800/10 flex justify-between items-center px-2">
+                        <span className="text-[7px] opacity-70">travelprint.me</span>
+                        <span className="text-[7px] font-medium opacity-70">Mi recuerdo de viaje</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1208,6 +1286,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
