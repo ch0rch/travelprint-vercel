@@ -1065,15 +1065,15 @@ export default function TravelStampGenerator() {
                           </div>
 
                           {travelTags.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 p-2 border rounded-md">
-                              {travelTags.map((tag, index) => (
+                            <div className="flex flex-wrap justify-center gap-1.5 p-2 border rounded-md">
+                              {travelTags.map((tag) => (
                                 <div
-                                  key={index}
-                                  className="flex items-center gap-1 bg-amber-50 text-amber-800 px-2 py-1 rounded-full text-xs border border-amber-200"
+                                  key={tag}
+                                  className="flex items-center gap-1 bg-amber-50 text-amber-800 px-2 py-1 rounded-full text-xs border border-amber-200 whitespace-nowrap"
                                 >
                                   <span>{tag}</span>
                                   <button
-                                    onClick={() => handleRemoveTag(index)}
+                                    onClick={() => handleRemoveTag(travelTags.indexOf(tag))}
                                     className="text-amber-500 hover:text-amber-700"
                                   >
                                     <X className="h-3 w-3" />
@@ -1158,7 +1158,7 @@ export default function TravelStampGenerator() {
                   <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-amber-800/20 rounded-br-lg" />
 
                   {/* Contenido */}
-                  <div className="relative z-10 flex flex-col h-full">
+                  <div className="relative z-10 flex flex-col h-full overflow-hidden">
                     <div ref={previewMapRef} className={getMapClasses()} style={{ position: "relative" }}>
                       <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-10"></div>
                       <div className="absolute top-0 left-0 right-0 p-2 text-center z-20">
@@ -1167,7 +1167,7 @@ export default function TravelStampGenerator() {
                       </div>
                     </div>
 
-                    <div className="p-2 space-y-1.5 flex-1 flex flex-col justify-end">
+                    <div className="p-2 space-y-1 flex-1 flex flex-col justify-end min-h-[80px]">
                       <div className="flex items-center justify-center">
                         <div className="inline-block px-1.5 py-0.5 bg-amber-100/50 rounded-full">
                           <p className={`${textColor} text-[9px] font-medium`}>
@@ -1187,11 +1187,11 @@ export default function TravelStampGenerator() {
                       )}
 
                       {travelTags.length > 0 && (
-                        <div className="flex flex-wrap justify-center gap-1 mt-0.5">
+                        <div className="flex flex-wrap justify-center gap-1 mt-0.5 px-2 max-w-full overflow-hidden">
                           {travelTags.map((tag) => (
                             <span
                               key={tag}
-                              className={`text-[8px] px-1.5 py-0.5 rounded-full bg-amber-100/80 text-amber-800 border border-amber-200`}
+                              className="text-[8px] px-1.5 py-0.5 rounded-full bg-amber-100/80 text-amber-800 border border-amber-200 whitespace-nowrap"
                             >
                               {tag}
                             </span>
@@ -1286,6 +1286,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
