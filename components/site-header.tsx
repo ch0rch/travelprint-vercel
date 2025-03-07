@@ -7,14 +7,11 @@ import { useState, useEffect } from "react"
 import ActivatePremiumModal from "./activate-premium-modal"
 import Link from "next/link"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import LanguageSwitcher from "./language-switcher"
-import { useTranslations } from "next-intl"
 
 // URL directa al producto en LemonSqueezy
 const LEMONSQUEEZY_PRODUCT_URL = "https://travelprint.lemonsqueezy.com/buy/2002abe5-88e1-4541-95f6-8ca287abaa44"
 
 export function SiteHeader() {
-  const t = useTranslations("header")
   const [isPremium, setIsPremium] = useState(false)
   const [showActivateModal, setShowActivateModal] = useState(false)
 
@@ -55,22 +52,20 @@ export function SiteHeader() {
         {/* Navegación para escritorio */}
         <nav className="hidden md:flex items-center gap-2">
           <Link href="/carta-del-creador" className="text-amber-800 hover:text-amber-600 text-sm mr-2">
-            {t("ourStory")}
+            Nuestra historia
           </Link>
-
-          <LanguageSwitcher />
 
           {!isPremium && (
             <>
               <Button variant="ghost" onClick={() => setShowActivateModal(true)}>
-                {t("activateLicense")}
+                Activar Licencia
               </Button>
               <Button
                 onClick={openLemonSqueezyCheckout}
                 className="bg-gradient-to-r from-amber-500 to-amber-700 hover:from-amber-600 hover:to-amber-800"
               >
                 <Crown className="h-4 w-4 mr-2" />
-                {t("becomePremium")}
+                Volverte Premium
               </Button>
             </>
           )}
@@ -91,12 +86,8 @@ export function SiteHeader() {
                   href="/carta-del-creador"
                   className="text-amber-800 hover:text-amber-600 text-sm font-medium px-2 py-2 rounded-md hover:bg-amber-50"
                 >
-                  {t("ourStory")}
+                  Nuestra historia
                 </Link>
-
-                <div className="px-2 py-2">
-                  <LanguageSwitcher />
-                </div>
 
                 {!isPremium ? (
                   <>
@@ -108,7 +99,7 @@ export function SiteHeader() {
                       }}
                       className="justify-start"
                     >
-                      {t("activateLicense")}
+                      Activar Licencia
                     </Button>
                     <Button
                       onClick={() => {
@@ -118,7 +109,7 @@ export function SiteHeader() {
                       className="bg-gradient-to-r from-amber-500 to-amber-700 hover:from-amber-600 hover:to-amber-800 justify-start"
                     >
                       <Crown className="h-4 w-4 mr-2" />
-                      {t("becomePremium")}
+                      Volverte Premium
                     </Button>
                   </>
                 ) : (
@@ -142,6 +133,7 @@ export function SiteHeader() {
     </header>
   )
 }
+
 
 
 
