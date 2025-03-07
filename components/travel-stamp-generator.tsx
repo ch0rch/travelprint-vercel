@@ -21,8 +21,6 @@ import {
   Lock,
   Sparkles,
   Palette,
-  Tag,
-  X,
 } from "lucide-react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
@@ -121,8 +119,6 @@ export default function TravelStampGenerator() {
   const [borderColor, setBorderColor] = useState(pastelColors[0].borderColor)
   const [textColor, setTextColor] = useState(pastelColors[0].textColor)
   const [stampFormat, setStampFormat] = useState("square")
-  const [newTag, setNewTag] = useState("")
-  const [travelTags, setTravelTags] = useState<string[]>([])
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const previewMapRef = useRef<HTMLDivElement>(null)
@@ -168,6 +164,8 @@ export default function TravelStampGenerator() {
       preserveDrawingBuffer: true,
       antialias: true,
       crossSourceCollisions: false,
+      pixelRatio: 2, // Aumentar la densidad de píxeles
+      maxZoom: 20, // Permitir más zoom para mejor detalle
     })
 
     // Manejar el evento de carga
@@ -180,7 +178,7 @@ export default function TravelStampGenerator() {
         destinations.forEach((dest) => {
           bounds.extend(dest.coordinates as mapboxgl.LngLatLike)
         })
-        previewMapRef2.current?.fitBounds(bounds, { padding: 30 })
+        previewMapRef2.current?.fitBounds(bounds, { padding: 40, duration: 0 })
       }
     })
 
@@ -263,7 +261,7 @@ export default function TravelStampGenerator() {
         destinations.forEach((dest) => {
           bounds.extend(dest.coordinates as mapboxgl.LngLatLike)
         })
-        previewMapRef2.current?.fitBounds(bounds, { padding: 30 })
+        previewMapRef2.current?.fitBounds(bounds, { padding: 40, duration: 0 })
       }
     })
   }, [destinations])
@@ -281,7 +279,7 @@ export default function TravelStampGenerator() {
       destinations.forEach((dest) => {
         bounds.extend(dest.coordinates as mapboxgl.LngLatLike)
       })
-      previewMapRef2.current?.fitBounds(bounds, { padding: 30 })
+      previewMapRef2.current?.fitBounds(bounds, { padding: 40, duration: 0 })
     }, 300)
 
     return () => clearTimeout(timer)
@@ -673,7 +671,7 @@ export default function TravelStampGenerator() {
       destinations.forEach((dest) => {
         bounds.extend(dest.coordinates as mapboxgl.LngLatLike)
       })
-      previewMapRef2.current.fitBounds(bounds, { padding: 30 })
+      previewMapRef2.current.fitBounds(bounds, { padding: 40, duration: 0 })
     }
   }
 
@@ -813,17 +811,6 @@ export default function TravelStampGenerator() {
     )
   }
 
-  const handleAddTag = () => {
-    if (newTag.trim() && travelTags.length < 3) {
-      setTravelTags([...travelTags, newTag.trim()])
-      setNewTag("")
-    }
-  }
-
-  const handleRemoveTag = (index: number) => {
-    setTravelTags(travelTags.filter((_, i) => i !== index))
-  }
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-6">
@@ -838,14 +825,12 @@ export default function TravelStampGenerator() {
                     <Input
                       id="destination"
                       value={newDestination}
-                      onChange
-                      id="destination"
-                      value={newDestination}
                       onChange={(e) => setNewDestination(e.target.value)}
                       placeholder="Ej: Talca, Constitución, Concepción..."
                       onKeyDown={(e) => e.key === "Enter" && searchDestination()}
                     />
                     <Button onClick={searchDestination} disabled={isSearching || !newDestination.trim()}>
+                      <Plus className                      disabled={isSearching || !newDestination.trim()}>
                       <Plus className="h-4 w-4 mr-1" />
                       Añadir
                     </Button>
@@ -1041,48 +1026,6 @@ export default function TravelStampGenerator() {
                           disabled={!isPremium}
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="travel-tags" className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <Tag className="h-4 w-4 mr-2" />
-                            Etiquetas de viaje
-                          </div>
-                          <span className="text-xs text-muted-foreground">Opcional</span>
-                        </Label>
-                        <div className="mt-2 space-y-2">
-                          <div className="flex gap-2">
-                            <Input
-                              id="travel-tag"
-                              placeholder="Añade una etiqueta (ej: Naturaleza, Aventura...)"
-                              value={newTag}
-                              onChange={(e) => setNewTag(e.target.value)}
-                              onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
-                            />
-                            <Button variant="outline" size="icon" onClick={handleAddTag} disabled={!newTag.trim()}>
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-
-                          {travelTags.length > 0 && (
-                            <div className="flex flex-wrap justify-center gap-1.5 p-2 border rounded-md">
-                              {travelTags.map((tag) => (
-                                <div
-                                  key={tag}
-                                  className="flex items-center gap-1 bg-amber-50 text-amber-800 px-2 py-1 rounded-full text-xs border border-amber-200 whitespace-nowrap"
-                                >
-                                  <span>{tag}</span>
-                                  <button
-                                    onClick={() => handleRemoveTag(travelTags.indexOf(tag))}
-                                    className="text-amber-500 hover:text-amber-700"
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
                     </div>
                   </TabsContent>
 
@@ -1188,22 +1131,11 @@ export default function TravelStampGenerator() {
                           <div className="px-2">
                             <div className="relative">
                               <span className={`absolute left-0 top-0 ${textColor} opacity-30 text-lg`}>"</span>
-                              <p className={`italic text-[10px] ${textColor} leading-relaxed px-4`}>{tripComment}</p>
+                              <p className={`italic text-[10px] ${textColor} leading-relaxed px-4 break-words max-w-full`}>
+                                {tripComment}
+                              </p>
                               <span className={`absolute right-0 bottom-0 ${textColor} opacity-30 text-lg`}>"</span>
                             </div>
-                          </div>
-                        )}
-
-                        {travelTags.length > 0 && (
-                          <div className="flex flex-wrap justify-center gap-1.5">
-                            {travelTags.map((tag) => (
-                              <span
-                                key={tag}
-                                className="text-[9px] px-2 py-0.5 rounded-full bg-amber-100/80 text-amber-800 border border-amber-200 whitespace-nowrap"
-                              >
-                                {tag}
-                              </span>
-                            ))}
                           </div>
                         )}
                       </div>
@@ -1295,6 +1227,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
