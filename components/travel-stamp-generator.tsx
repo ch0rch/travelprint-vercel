@@ -562,11 +562,11 @@ export default function TravelStampGenerator() {
 
       // Configuración de html2canvas
       const canvas = await html2canvas(previewContainerRef.current, {
-        scale: 2,
+        scale: 4, // Aumentar de 2 a 4 para mejor calidad
         useCORS: true,
         allowTaint: true,
-        backgroundColor: "#ffffff", // Fondo blanco en lugar de transparente
-        logging: true, // Activar logs para debug
+        backgroundColor: "#ffffff",
+        logging: false,
         onclone: (document, element) => {
           // Asegurarse de que los estilos se apliquen correctamente en el clon
           const mapContainer = element.querySelector(`[class*="${getMapClasses()}"]`)
@@ -1167,37 +1167,43 @@ export default function TravelStampGenerator() {
                   <div className="relative z-10 flex flex-col h-full overflow-hidden">
                     <div ref={previewMapRef} className={getMapClasses()} style={{ position: "relative" }}>
                       <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/50 to-transparent z-10"></div>
-                      <div className="absolute top-0 left-0 right-0 p-2 text-center z-20">
-                        <h3 className="font-serif font-bold text-base tracking-wide text-white">{tripName}</h3>
-                        {tripDate && <p className="text-[10px] text-white font-medium tracking-wider">{tripDate}</p>}
+                      <div className="absolute top-0 left-0 right-0 p-3 text-center z-20">
+                        <h3 className="font-serif font-bold text-lg tracking-wide text-white drop-shadow-md">
+                          {tripName}
+                        </h3>
+                        {tripDate && (
+                          <p className="text-sm text-white font-medium tracking-wider drop-shadow-sm mt-1">
+                            {tripDate}
+                          </p>
+                        )}
                       </div>
                     </div>
 
-                    <div className="p-2 space-y-1 flex-1 flex flex-col justify-end min-h-[80px]">
+                    <div className="p-3 space-y-2 flex-1 flex flex-col justify-end min-h-[120px]">
                       <div className="flex items-center justify-center">
-                        <div className="inline-block px-1.5 py-0.5 bg-amber-100/50 rounded-full">
-                          <p className={`${textColor} text-[9px] font-medium`}>
+                        <div className="inline-block px-2 py-1 bg-amber-100/50 rounded-full">
+                          <p className={`${textColor} text-[10px] font-medium`}>
                             <strong>{calculateTotalDistance()}&nbsp;km</strong>&nbsp;recorridos
                           </p>
                         </div>
                       </div>
 
                       {tripComment && isPremium && (
-                        <div className="mt-1 px-1.5">
+                        <div className="mt-2 px-2">
                           <div className="relative">
-                            <span className={`absolute left-0 top-0 ${textColor} opacity-30 text-base`}>"</span>
-                            <p className={`italic text-[9px] ${textColor} leading-snug px-4`}>{tripComment}</p>
-                            <span className={`absolute right-0 bottom-0 ${textColor} opacity-30 text-base`}>"</span>
+                            <span className={`absolute left-0 top-0 ${textColor} opacity-30 text-lg`}>"</span>
+                            <p className={`italic text-[10px] ${textColor} leading-relaxed px-4`}>{tripComment}</p>
+                            <span className={`absolute right-0 bottom-0 ${textColor} opacity-30 text-lg`}>"</span>
                           </div>
                         </div>
                       )}
 
                       {travelTags.length > 0 && (
-                        <div className="flex flex-wrap justify-center gap-1 mt-0.5 px-2 max-w-full overflow-hidden">
+                        <div className="flex flex-wrap justify-center gap-1.5 mt-2 px-2">
                           {travelTags.map((tag) => (
                             <span
                               key={tag}
-                              className="text-[8px] px-1.5 py-0.5 rounded-full bg-amber-100/80 text-amber-800 border border-amber-200 whitespace-nowrap"
+                              className="text-[9px] px-2 py-0.5 rounded-full bg-amber-100/80 text-amber-800 border border-amber-200 whitespace-nowrap"
                             >
                               {tag}
                             </span>
@@ -1205,9 +1211,9 @@ export default function TravelStampGenerator() {
                         </div>
                       )}
 
-                      <div className="mt-auto pt-0.5 text-center border-t border-amber-800/10 flex justify-between items-center px-2">
-                        <span className="text-[7px] opacity-70">travelprint.me</span>
-                        <span className="text-[7px] font-medium opacity-70">Mi recuerdo de viaje</span>
+                      <div className="mt-auto pt-2 text-center border-t border-amber-800/10 flex justify-between items-center px-2">
+                        <span className="text-[8px] opacity-70">travelprint.me</span>
+                        <span className="text-[8px] font-medium opacity-70">Mi recuerdo de viaje</span>
                       </div>
                     </div>
                   </div>
@@ -1292,6 +1298,7 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
 
 
 
