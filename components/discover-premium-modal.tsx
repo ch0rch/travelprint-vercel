@@ -122,7 +122,7 @@ export default function DiscoverPremiumModal({ onClose, onPurchase }: DiscoverPr
               ¡Mejora tu experiencia hoy mismo!
             </p>
             <p className="text-xs text-muted-foreground">
-              Pago único. Sin renovación automática. Satisfacción garantizada.
+              Pago único. Sin renovación automática.
             </p>
           </div>
         </CardContent>

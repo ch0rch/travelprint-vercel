@@ -25,6 +25,12 @@ export default function RootLayout({
           data-domain="travelprint.me"
           src="https://datafa.st/js/script.js"
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.lemonSqueezyAffiliateConfig = { store: "travelprint" };`,
+          }}
+        />
+        <script src="https://lmsqueezy.com/affiliate.js" defer />
       </head>
       <body className={inter.className}>
         <SiteHeader />
@@ -33,6 +39,8 @@ export default function RootLayout({
     </html>
   )
 }
+
+
 
 
 
