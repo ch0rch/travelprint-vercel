@@ -1,8 +1,28 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { Crown } from "lucide-react"
 import Link from "next/link"
+import { useState } from "react"
+import DiscoverPremiumModal from "./discover-premium-modal"
+
+// URL directa al producto en LemonSqueezy
+const LEMONSQUEEZY_PRODUCT_URL = "https://travelprint.lemonsqueezy.com/buy/2002abe5-88e1-4541-95f6-8ca287abaa44"
 
 export function HeroSection() {
+  const [showPremiumModal, setShowPremiumModal] = useState(false)
+
+  const openLemonSqueezyCheckout = () => {
+    const returnUrl = typeof window !== "undefined" ? `${window.location.origin}?license_key={license_key}` : ""
+    const customParams = new URLSearchParams({
+      "checkout[custom][purchase_id]": Date.now().toString(),
+      "checkout[custom][is_renewal]": "false",
+      "checkout[redirect_url]": returnUrl,
+    })
+    const lemonSqueezyUrl = `${LEMONSQUEEZY_PRODUCT_URL}?${customParams.toString()}`
+    window.open(lemonSqueezyUrl, "_blank")
+  }
+
   return (
     <div className="relative overflow-hidden bg-gradient-to-b from-amber-50 to-orange-100 py-20 md:py-32">
       {/* Elementos decorativos */}
@@ -41,19 +61,29 @@ export function HeroSection() {
               size="lg"
               variant="outline"
               className="border-amber-600 text-amber-700 hover:bg-amber-100 text-lg py-6"
-              asChild
+              onClick={() => setShowPremiumModal(true)}
             >
-              <Link href="#premium">
-                <Crown className="h-5 w-5 mr-2" />
-                Descubre Premium
-              </Link>
+              <Crown className="h-5 w-5 mr-2" />
+              Descubre Premium
             </Button>
           </div>
         </div>
       </div>
+
+      {showPremiumModal && (
+        <DiscoverPremiumModal
+          onClose={() => setShowPremiumModal(false)}
+          onPurchase={() => {
+            openLemonSqueezyCheckout()
+            setShowPremiumModal(false)
+          }}
+        />
+      )}
     </div>
   )
 }
+
+
 
 
 
