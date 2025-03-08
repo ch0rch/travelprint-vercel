@@ -156,23 +156,27 @@ export async function POST(request: Request) {
     console.log("API Key (primeros 5 caracteres):", process.env.OPENAI_API_KEY?.substring(0, 5) + "...")
 
     try {
-      // Ejecutar la solicitud a OpenAI con un límite de tiempo
-      const apiKey = process.env.OPENAI_API_KEY
+      console.log("Recibiendo solicitud para generar ilustración")
+      console.log("Datos de la solicitud:", { prompt, style, creativity, isPremium })
 
-      console.log("Preparando solicitud a OpenAI")
+      // Verificar si la API key está configurada correctamente
+      const apiKey = process.env.OPENAI_API_KEY
+      if (!apiKey?.startsWith("sk-")) {
+        throw new Error("API key de OpenAI no configurada correctamente")
+      }
 
       const requestBody = {
         model: "dall-e-3",
         prompt: enhancedPrompt,
         n: 1,
         size: "1024x1024",
-        quality: "standard", // Cambiar a "standard" en lugar de "hd" para respuestas más rápidas
+        quality: "standard",
         style: "vivid",
       }
 
-      console.log("Cuerpo de la solicitud:", JSON.stringify(requestBody))
+      console.log("Enviando solicitud a OpenAI:", JSON.stringify(requestBody, null, 2))
 
-      const openaiPromise = fetch("https://api.openai.com/v1/images/generations", {
+      const openaiResponse = await fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -181,69 +185,61 @@ export async function POST(request: Request) {
         body: JSON.stringify(requestBody),
       })
 
-      console.log("Solicitud enviada a OpenAI, esperando respuesta...")
+      console.log("Respuesta recibida de OpenAI. Status:", openaiResponse.status)
 
-      // Usar Promise.race para implementar el timeout
-      const openaiResponse = await Promise.race([openaiPromise, timeoutPromise])
+      // Log the full response for debugging
+      const responseText = await openaiResponse.text()
+      console.log("Respuesta completa de OpenAI:", responseText)
 
-      console.log("Respuesta de OpenAI recibida. Status:", openaiResponse.status)
+      // Parse the response as JSON
+      let data
+      try {
+        data = JSON.parse(responseText)
+      } catch (parseError) {
+        console.error("Error parseando respuesta JSON:", parseError)
+        throw new Error("La respuesta de OpenAI no es un JSON válido")
+      }
 
       if (!openaiResponse.ok) {
-        // Intentar obtener el texto de error
-        const errorText = await openaiResponse.text()
-        console.error("Texto de error de OpenAI:", errorText)
-
-        // Activar modo de respaldo para futuras solicitudes
-        USE_FALLBACK = true
-
-        throw new Error(`Error de OpenAI (${openaiResponse.status}): ${errorText.substring(0, 200)}`)
+        throw new Error(`Error de OpenAI (${openaiResponse.status}): ${JSON.stringify(data)}`)
       }
-
-      // Verificar si la respuesta es JSON
-      const contentType = openaiResponse.headers.get("content-type") || ""
-      console.log("Tipo de contenido de la respuesta:", contentType)
-
-      if (!contentType.includes("application/json")) {
-        console.error("La respuesta no es JSON:", contentType)
-        USE_FALLBACK = true
-        throw new Error("La API de OpenAI devolvió un formato inesperado")
-      }
-
-      // Ahora podemos estar más seguros de que es JSON
-      const data = await openaiResponse.json()
-      console.log("Datos de OpenAI procesados correctamente")
-      console.log("Estructura de la respuesta:", JSON.stringify(data, null, 2))
 
       const imageUrl = data.data?.[0]?.url
-
       if (!imageUrl) {
-        console.error("No se encontró URL de imagen en la respuesta:", JSON.stringify(data))
-        throw new Error("No se pudo generar la imagen: URL no encontrada en respuesta")
+        console.error("Respuesta sin URL de imagen:", data)
+        throw new Error("No se encontró URL de imagen en la respuesta")
       }
 
-      console.log("URL de imagen generada:", imageUrl.substring(0, 50) + "...")
+      console.log("Imagen generada exitosamente. URL:", imageUrl)
       return NextResponse.json({ imageUrl })
-    } catch (openaiError) {
-      console.error("Error en la llamada a OpenAI:", openaiError)
+    } catch (error) {
+      console.error("Error en la generación de imagen:", error)
 
-      // Si hay un error con la API de OpenAI, usar el modo de respaldo
-      console.log("Usando modo de respaldo por error en OpenAI")
-      USE_FALLBACK = true
+      // Determinar si es un error de timeout
+      const isTimeoutError =
+        error.message?.includes("timeout") ||
+        error.message?.includes("FUNCTION_INVOCATION_TIMEOUT") ||
+        error.name === "AbortError"
 
-      // Devolver una imagen de ejemplo basada en el estilo
-      const fallbackImageUrl =
-        SAMPLE_IMAGES[style as keyof typeof SAMPLE_IMAGES] ||
-        "https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=1000&auto=format&fit=crop"
+      if (isTimeoutError) {
+        console.log("Error de timeout detectado, usando imagen de respaldo")
+        return NextResponse.json({
+          imageUrl: SAMPLE_IMAGES[style as keyof typeof SAMPLE_IMAGES] || SAMPLE_IMAGES.watercolor,
+          error: "La generación de imagen excedió el tiempo límite",
+          isTimeout: true,
+        })
+      }
 
-      return NextResponse.json({
-        imageUrl: fallbackImageUrl,
-        note: "Usando imagen de ejemplo debido a un error con OpenAI",
-        error: openaiError instanceof Error ? openaiError.message : String(openaiError),
-        debug: {
-          errorType: openaiError instanceof Error ? openaiError.name : "Unknown",
-          stack: openaiError instanceof Error ? openaiError.stack : undefined,
+      return NextResponse.json(
+        {
+          error: error instanceof Error ? error.message : "Error desconocido",
+          details: error instanceof Error ? error.stack : undefined,
+          timestamp: new Date().toISOString(),
         },
-      })
+        {
+          status: error.message?.includes("API key") ? 401 : 500,
+        },
+      )
     }
   } catch (error: any) {
     console.error("Error general en la generación de ilustración:", error)
@@ -301,6 +297,8 @@ export async function POST(request: Request) {
     )
   }
 }
+
+
 
 
 
