@@ -8,6 +8,7 @@ import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Crown, Download, RefreshCw, Sparkles, ImageIcon, AlertCircle, Clock } from "lucide-react"
+import { isPremiumUser } from "@/utils/premium-storage"
 import OpenAIDiagnostics from "./openai-diagnostics"
 
 interface AIIllustratedStampProps {
@@ -87,9 +88,10 @@ export default function AIIllustratedStamp({
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isTimeoutError, setIsTimeoutError] = useState(false)
-  const [isPremium] = useState(true) //isPremiumUser()
+  const isPremium = isPremiumUser()
   const [retryCount, setRetryCount] = useState(0)
   const [showDiagnostics, setShowDiagnostics] = useState(false)
+  const [imageId, setImageId] = useState<string | null>(null)
 
   // Función para generar la estampita ilustrada
   const generateIllustration = async (retry = false) => {
@@ -146,9 +148,6 @@ export default function AIIllustratedStamp({
       }
 
       console.log("Enviando solicitud para generar ilustración")
-
-      // Añadir estos datos a la solicitud
-      //const destinationNames = destinations.map((d) => d.name).join(", ")
 
       try {
         // Llamada a la API de generación de imágenes con un timestamp para evitar caché
@@ -232,6 +231,11 @@ export default function AIIllustratedStamp({
 
         console.log("Imagen generada correctamente:", data.imageUrl)
         setGeneratedImage(data.imageUrl)
+
+        // Guardar el ID de la imagen si está disponible
+        if (data.imageId) {
+          setImageId(data.imageId)
+        }
 
         // Si hay una nota de respaldo, mostrarla como advertencia
         if (data.note && data.note.includes("respaldo")) {
@@ -362,9 +366,6 @@ export default function AIIllustratedStamp({
     geometric: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=1000&auto=format&fit=crop",
     anime: "https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1000&auto=format&fit=crop",
   }
-
-  // Guarda la URL original antes de que pueda ser modificada por el proxy
-  const originalImageUrl = generatedImage || "/placeholder.svg"
 
   return (
     <Card className="w-full">
@@ -541,17 +542,9 @@ export default function AIIllustratedStamp({
                         src={generatedImage || "/placeholder.svg"}
                         alt={`Souvenir ilustrado de ${tripName}`}
                         className="w-full h-auto"
-                        crossOrigin="anonymous"
                         onError={(e) => {
                           console.error("Error al cargar la imagen:", e)
-                          // Si el proxy falla, intentar con la URL original
-                          const imgElement = e.currentTarget
-                          if (imgElement.src !== originalImageUrl) {
-                            console.log("Intentando cargar la imagen original...")
-                            imgElement.src = originalImageUrl
-                          } else {
-                            setError("Error al cargar la imagen generada. Por favor, intenta de nuevo.")
-                          }
+                          setError("Error al cargar la imagen generada. Por favor, intenta de nuevo.")
                         }}
                       />
                     )}
@@ -596,6 +589,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 

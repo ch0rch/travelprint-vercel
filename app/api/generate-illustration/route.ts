@@ -32,6 +32,11 @@ function isOpenAIKeyConfigured() {
   return isValid
 }
 
+// Función para generar un ID único para la imagen
+function generateImageId() {
+  return `img_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+}
+
 export async function POST(request: Request) {
   try {
     console.log("Recibiendo solicitud para generar ilustración")
@@ -91,8 +96,6 @@ export async function POST(request: Request) {
         },
       })
     }
-
-    // Base prompt para el estilo de souvenir de viaje (reducido para procesar más rápido)
 
     // Añadir instrucciones específicas según el estilo seleccionado (versión simplificada)
     let styleSpecificPrompt = ""
@@ -208,10 +211,22 @@ export async function POST(request: Request) {
 
       console.log("URL original de imagen generada:", originalImageUrl.substring(0, 100) + "...")
 
-      // Devolver directamente la URL original en lugar de usar el proxy
+      // Generar un ID único para la imagen
+      const imageId = generateImageId()
+
+      // Crear una URL para nuestra API de imágenes
+      const baseUrl = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+
+      // Crear una URL para nuestra API de imágenes que incluye el ID y la URL original
+      const imageUrl = `${baseUrl}/api/images/${imageId}?url=${encodeURIComponent(originalImageUrl)}`
+
+      // Devolver la URL de nuestra API
       return NextResponse.json({
-        imageUrl: originalImageUrl,
-        originalImageUrl: originalImageUrl,
+        imageUrl,
+        originalImageUrl,
+        imageId,
         revised_prompt: data.data?.[0]?.revised_prompt || enhancedPrompt,
       })
     } catch (error: any) {
@@ -292,6 +307,8 @@ export async function POST(request: Request) {
     )
   }
 }
+
+
 
 
 
