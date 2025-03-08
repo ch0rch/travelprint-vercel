@@ -134,27 +134,23 @@ export default function AIIllustratedStamp({
         prompt = `Souvenir de viaje para "${tripName}" con destinos: ${destinationNames}.`
       } else {
         prompt = `
-          Crea una estampita de viaje para "${tripName}" que recorre ${destinationNames}.
-          
-          Detalles del viaje:
-          - Distancia: ${distanceKm} kilómetros
-          - Fecha: ${tripDate || "No especificada"}
-          - Tipo de paisaje: ${landscapeType}
-          ${tripComment ? `- Historia del viaje: ${tripComment}` : ""}
-          ${additionalPrompt ? `- Elementos a incluir: ${additionalPrompt}` : ""}
-          
-          El nombre "${tripName}" debe aparecer prominentemente en la estampita.
-        `
+        Crea una estampita de viaje para "${tripName}" que recorre ${destinationNames}.
+        
+        Detalles del viaje:
+        - Distancia: ${distanceKm} kilómetros
+        - Fecha: ${tripDate || "No especificada"}
+        - Tipo de paisaje: ${landscapeType}
+        ${tripComment ? `- Historia del viaje: ${tripComment}` : ""}
+        ${additionalPrompt ? `- Elementos a incluir: ${additionalPrompt}` : ""}
+        
+        El nombre "${tripName}" debe aparecer prominentemente en la estampita.
+      `
       }
 
       console.log("Enviando solicitud para generar ilustración")
 
-      // Implementar un timeout en el cliente también
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 segundos de timeout
-
       try {
-        // Llamada a la API de generación de imágenes
+        // Llamada a la API de generación de imágenes con un timeout más largo
         const response = await fetch("/api/generate-illustration", {
           method: "POST",
           headers: {
@@ -165,25 +161,27 @@ export default function AIIllustratedStamp({
             style: selectedStyle,
             creativity: creativity[0],
             isPremium,
+            timestamp: Date.now(), // Añadir timestamp para evitar caché
           }),
-          signal: controller.signal,
+          // No usar AbortController aquí para permitir que el servidor maneje el timeout
         })
 
-        clearTimeout(timeoutId)
+        console.log("Respuesta recibida:", response.status, response.statusText)
 
         // Verificar primero si la respuesta es válida
         if (!response.ok) {
           const contentType = response.headers.get("content-type") || ""
+          console.log("Tipo de contenido de error:", contentType)
 
           // Intentar obtener el texto del error
           let errorText
           try {
             errorText = await response.text()
+            console.log("Texto de error:", errorText)
           } catch (e) {
             errorText = "No se pudo leer la respuesta del servidor"
+            console.error("Error al leer respuesta:", e)
           }
-
-          console.error("Error en respuesta API:", response.status, errorText)
 
           // Verificar si es un error de tiempo de espera
           if (
@@ -214,6 +212,8 @@ export default function AIIllustratedStamp({
 
         // Verificar el tipo de contenido
         const contentType = response.headers.get("content-type") || ""
+        console.log("Tipo de contenido de respuesta:", contentType)
+
         if (!contentType.includes("application/json")) {
           console.error("La respuesta no es JSON:", contentType)
           throw new Error(`Respuesta inesperada del servidor: formato no válido`)
@@ -222,17 +222,22 @@ export default function AIIllustratedStamp({
         // Ahora intentamos parsear el JSON con manejo de errores
         let data
         try {
-          data = await response.json()
+          const responseText = await response.text()
+          console.log("Texto de respuesta:", responseText.substring(0, 200) + "...")
+          data = JSON.parse(responseText)
         } catch (e) {
           console.error("Error al parsear JSON:", e)
           throw new Error("Error al procesar la respuesta del servidor. La respuesta no es un JSON válido.")
         }
 
+        console.log("Datos de respuesta:", data)
+
         if (!data.imageUrl) {
+          console.error("No se recibió URL de imagen en la respuesta:", data)
           throw new Error("No se recibió URL de imagen en la respuesta")
         }
 
-        console.log("Imagen generada correctamente:", data.note || "OK")
+        console.log("Imagen generada correctamente:", data.imageUrl.substring(0, 50) + "...")
         setGeneratedImage(data.imageUrl)
 
         // Si hay una nota de respaldo, mostrarla como advertencia
@@ -242,13 +247,7 @@ export default function AIIllustratedStamp({
           )
         }
       } catch (fetchError) {
-        // Manejar errores de AbortController (timeout)
-        if (fetchError.name === "AbortError") {
-          setIsTimeoutError(true)
-          throw new Error(
-            "La solicitud ha excedido el tiempo de espera. Estamos usando una imagen de ejemplo como alternativa.",
-          )
-        }
+        console.error("Error en fetch:", fetchError)
         throw fetchError
       }
     } catch (error) {
@@ -587,6 +586,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 
