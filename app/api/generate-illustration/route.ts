@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server"
 
+// Importar la utilidad de Cloudinary
+import { uploadImageFromUrl } from "@/utils/cloudinary"
+
 // Imágenes de ejemplo para diferentes estilos (para pruebas sin API)
 const SAMPLE_IMAGES = {
   watercolor: "https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=1000&auto=format&fit=crop",
@@ -32,10 +35,11 @@ function isOpenAIKeyConfigured() {
   return isValid
 }
 
-// Función para generar un ID único para la imagen
-function generateImageId() {
-  return `img_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-}
+// Reemplazar la función para generar un ID único para la imagen
+// Eliminar esta función:
+// function generateImageId() {
+//   return `img_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+// }
 
 export async function POST(request: Request) {
   try {
@@ -211,23 +215,34 @@ export async function POST(request: Request) {
 
       console.log("URL original de imagen generada:", originalImageUrl.substring(0, 100) + "...")
 
-      // Generar un ID único para la imagen
-      const imageId = generateImageId()
+      // Subir la imagen a Cloudinary
+      let cloudinaryUrl
+      try {
+        // Crear un ID único para la imagen en Cloudinary basado en el viaje
+        const safeTrip = tripName.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase()
+        const uniqueId = `${safeTrip}_${Date.now()}`
 
-      // Crear una URL para nuestra API de imágenes
-      const baseUrl = process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+        // Subir la imagen a Cloudinary
+        cloudinaryUrl = await uploadImageFromUrl(originalImageUrl, "travel-stamps", uniqueId)
+        console.log("Imagen subida a Cloudinary:", cloudinaryUrl)
+      } catch (cloudinaryError) {
+        console.error("Error al subir imagen a Cloudinary:", cloudinaryError)
+        // Si falla la subida a Cloudinary, devolver la URL original como respaldo
+        return NextResponse.json({
+          imageUrl: originalImageUrl,
+          originalImageUrl,
+          error: "Error al subir a Cloudinary, usando URL original",
+          debug: {
+            errorType: cloudinaryError instanceof Error ? cloudinaryError.name : "Unknown",
+            message: cloudinaryError instanceof Error ? cloudinaryError.message : String(cloudinaryError),
+          },
+        })
+      }
 
-      // Crear una URL para nuestra API de imágenes que incluye el ID y la URL original
-      const imageUrl = `${baseUrl}/api/images/${imageId}?url=${encodeURIComponent(originalImageUrl)}`
-
-      // Devolver la URL de nuestra API
+      // Devolver la URL de Cloudinary
       return NextResponse.json({
-        imageUrl,
+        imageUrl: cloudinaryUrl,
         originalImageUrl,
-        imageId,
-        revised_prompt: data.data?.[0]?.revised_prompt || enhancedPrompt,
       })
     } catch (error: any) {
       console.error("Error en la llamada a OpenAI:", error)
@@ -241,15 +256,27 @@ export async function POST(request: Request) {
         SAMPLE_IMAGES[style as keyof typeof SAMPLE_IMAGES] ||
         "https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=1000&auto=format&fit=crop"
 
-      return NextResponse.json({
-        imageUrl: fallbackImageUrl,
-        note: "Usando imagen de ejemplo debido a un error con OpenAI",
-        error: error instanceof Error ? error.message : String(error),
-        debug: {
-          errorType: error instanceof Error ? error.name : "Unknown",
-          stack: error instanceof Error ? error.stack : undefined,
-        },
-      })
+      // Intentar subir la imagen de respaldo a Cloudinary
+      try {
+        const safeTrip = tripName ? tripName.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase() : "fallback"
+        const uniqueId = `${safeTrip}_fallback_${Date.now()}`
+        const cloudinaryFallbackUrl = await uploadImageFromUrl(fallbackImageUrl, "travel-stamps-fallback", uniqueId)
+
+        return NextResponse.json({
+          imageUrl: cloudinaryFallbackUrl,
+          note: "Usando imagen de ejemplo debido a un error con OpenAI",
+          error: error instanceof Error ? error.message : String(error),
+        })
+      } catch (cloudinaryError) {
+        console.error("Error al subir imagen de respaldo a Cloudinary:", cloudinaryError)
+
+        // Si falla la subida a Cloudinary, devolver la URL de respaldo directa
+        return NextResponse.json({
+          imageUrl: fallbackImageUrl,
+          note: "Usando imagen de ejemplo debido a un error con OpenAI",
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
     }
   } catch (error: any) {
     console.error("Error general en la generación de ilustración:", error)
@@ -307,6 +334,7 @@ export async function POST(request: Request) {
     )
   }
 }
+
 
 
 

@@ -88,7 +88,7 @@ export default function AIIllustratedStamp({
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isTimeoutError, setIsTimeoutError] = useState(false)
-  const isPremium = isPremiumUser()
+  const [isPremium = isPremiumUser()\
   const [retryCount, setRetryCount] = useState(0)
   const [showDiagnostics, setShowDiagnostics] = useState(false)
   const [imageId, setImageId] = useState<string | null>(null)
@@ -149,103 +149,93 @@ export default function AIIllustratedStamp({
 
       console.log("Enviando solicitud para generar ilustración")
 
-      try {
-        // Llamada a la API de generación de imágenes con un timestamp para evitar caché
-        const response = await fetch("/api/generate-illustration", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            prompt,
-            style: selectedStyle,
-            creativity: creativity[0],
-            isPremium,
-            tripName,
-            destinationNames,
-            timestamp: Date.now(), // Añadir timestamp para evitar caché
-          }),
-        })
+      // Llamada a la API de generación de imágenes con un timestamp para evitar caché
+      const response = await fetch("/api/generate-illustration", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+          style: selectedStyle,
+          creativity: creativity[0],
+          isPremium,
+          tripName,
+          destinationNames,
+          timestamp: Date.now(), // Añadir timestamp para evitar caché
+        }),
+      })
 
-        console.log("Respuesta recibida:", response.status, response.statusText)
+      console.log("Respuesta recibida:", response.status, response.statusText)
 
-        // Verificar primero si la respuesta es válida
-        if (!response.ok) {
-          const contentType = response.headers.get("content-type") || ""
-          console.log("Tipo de contenido de error:", contentType)
+      // Verificar primero si la respuesta es válida
+      if (!response.ok) {
+        const contentType = response.headers.get("content-type") || ""
+        console.log("Tipo de contenido de error:", contentType)
 
-          // Intentar obtener el texto del error
-          let errorText
-          try {
-            errorText = await response.text()
-            console.log("Texto de error:", errorText)
-          } catch (e) {
-            errorText = "No se pudo leer la respuesta del servidor"
-            console.error("Error al leer respuesta:", e)
-          }
-
-          // Verificar si es un error de tiempo de espera
-          if (
-            response.status === 504 ||
-            errorText.includes("timeout") ||
-            errorText.includes("FUNCTION_INVOCATION_TIMEOUT")
-          ) {
-            setIsTimeoutError(true)
-            throw new Error(
-              "La generación de la imagen está tardando demasiado tiempo. Por favor, intenta con un estilo diferente o simplifica tu solicitud.",
-            )
-          }
-
-          // Intentar parsear como JSON si parece ser JSON
-          let errorData
-          if (contentType.includes("application/json") && errorText.trim().startsWith("{")) {
-            try {
-              errorData = JSON.parse(errorText)
-              throw new Error(errorData.error || errorData.details || "Error al generar la ilustración")
-            } catch (e) {
-              // Si falla el parsing, usar el texto original
-              throw new Error(`Error del servidor: ${response.status} - ${errorText.substring(0, 100)}`)
-            }
-          } else {
-            throw new Error(`Error del servidor: ${response.status} - ${errorText.substring(0, 100)}`)
-          }
-        }
-
-        // Ahora intentamos parsear el JSON con manejo de errores
-        let data
+        // Intentar obtener el texto del error
+        let errorText
         try {
-          const responseText = await response.text()
-          console.log("Texto de respuesta recibido, longitud:", responseText.length)
-          data = JSON.parse(responseText)
+          errorText = await response.text()
+          console.log("Texto de error:", errorText)
         } catch (e) {
-          console.error("Error al parsear JSON:", e)
-          throw new Error("Error al procesar la respuesta del servidor. La respuesta no es un JSON válido.")
+          errorText = "No se pudo leer la respuesta del servidor"
+          console.error("Error al leer respuesta:", e)
         }
 
-        console.log("Datos de respuesta recibidos:", data)
-
-        if (!data.imageUrl) {
-          console.error("No se recibió URL de imagen en la respuesta:", data)
-          throw new Error("No se recibió URL de imagen en la respuesta")
-        }
-
-        console.log("Imagen generada correctamente:", data.imageUrl)
-        setGeneratedImage(data.imageUrl)
-
-        // Guardar el ID de la imagen si está disponible
-        if (data.imageId) {
-          setImageId(data.imageId)
-        }
-
-        // Si hay una nota de respaldo, mostrarla como advertencia
-        if (data.note && data.note.includes("respaldo")) {
-          setError(
-            "Usando imagen de ejemplo debido a problemas con el servicio de IA. La imagen no es generada específicamente para tu ruta.",
+        // Verificar si es un error de tiempo de espera
+        if (
+          response.status === 504 ||
+          errorText.includes("timeout") ||
+          errorText.includes("FUNCTION_INVOCATION_TIMEOUT")
+        ) {
+          setIsTimeoutError(true)
+          throw new Error(
+            "La generación de la imagen está tardando demasiado tiempo. Por favor, intenta con un estilo diferente o simplifica tu solicitud.",
           )
         }
-      } catch (fetchError) {
-        console.error("Error en fetch:", fetchError)
-        throw fetchError
+
+        // Intentar parsear como JSON si parece ser JSON
+        let errorData
+        if (contentType.includes("application/json") && errorText.trim().startsWith("{")) {
+          try {
+            errorData = JSON.parse(errorText)
+            throw new Error(errorData.error || errorData.details || "Error al generar la ilustración")
+          } catch (e) {
+            // Si falla el parsing, usar el texto original
+            throw new Error(`Error del servidor: ${response.status} - ${errorText.substring(0, 100)}`)
+          }
+        } else {
+          throw new Error(`Error del servidor: ${response.status} - ${errorText.substring(0, 100)}`)
+        }
+      }
+
+      // Ahora intentamos parsear el JSON con manejo de errores
+      let data
+      try {
+        const responseText = await response.text()
+        console.log("Texto de respuesta recibido, longitud:", responseText.length)
+        data = JSON.parse(responseText)
+      } catch (e) {
+        console.error("Error al parsear JSON:", e)
+        throw new Error("Error al procesar la respuesta del servidor. La respuesta no es un JSON válido.")
+      }
+
+      console.log("Datos de respuesta recibidos:", data)
+
+      if (!data.imageUrl) {
+        console.error("No se recibió URL de imagen en la respuesta:", data)
+        throw new Error("No se recibió URL de imagen en la respuesta")
+      }
+
+      console.log("Imagen generada correctamente:", data.imageUrl)
+      setGeneratedImage(data.imageUrl)
+
+      // Si hay una nota de respaldo, mostrarla como advertencia
+      if (data.note && data.note.includes("respaldo")) {
+        setError(
+          "Usando imagen de ejemplo debido a problemas con el servicio de IA. La imagen no es generada específicamente para tu ruta.",
+        )
       }
     } catch (error) {
       console.error("Error generando la ilustración:", error)
@@ -542,9 +532,16 @@ export default function AIIllustratedStamp({
                         src={generatedImage || "/placeholder.svg"}
                         alt={`Souvenir ilustrado de ${tripName}`}
                         className="w-full h-auto"
+                        crossOrigin="anonymous"
+                        loading="eager"
                         onError={(e) => {
                           console.error("Error al cargar la imagen:", e)
                           setError("Error al cargar la imagen generada. Por favor, intenta de nuevo.")
+                          // Intentar cargar la imagen original si está disponible
+                          const imgElement = e.target as HTMLImageElement
+                          if (imgElement.src !== generatedImage) {
+                            imgElement.src = generatedImage
+                          }
                         }}
                       />
                     )}
@@ -589,6 +586,10 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
+
+
 
 
 
