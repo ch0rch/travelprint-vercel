@@ -539,15 +539,19 @@ export default function AIIllustratedStamp({
                     height={500}
                     className="w-full h-auto"
                     unoptimized={true}
-                    crossOrigin="anonymous" // Añadir esto
-                    loading="eager" // Añadir esto
+                    crossOrigin="anonymous"
+                    loading="eager"
+                    priority={true} // Añadir esto para cargar la imagen con alta prioridad
                     onError={(e) => {
                       console.error("Error al cargar la imagen:", e)
-                      // Intentar cargar la imagen original si el proxy falla
-                      if (e.currentTarget.src !== originalImageUrl) {
-                        e.currentTarget.src = originalImageUrl
+                      // Si el proxy falla, intentar con la URL original
+                      const imgElement = e.currentTarget as HTMLImageElement
+                      if (imgElement.src !== originalImageUrl) {
+                        console.log("Intentando cargar la imagen original...")
+                        imgElement.src = originalImageUrl
+                      } else {
+                        setError("Error al cargar la imagen generada. Por favor, intenta de nuevo.")
                       }
-                      setError("Error al cargar la imagen generada. Por favor, intenta de nuevo.")
                     }}
                   />
                 )}
@@ -590,6 +594,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 
