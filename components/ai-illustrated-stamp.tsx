@@ -8,8 +8,6 @@ import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Crown, Download, RefreshCw, Sparkles, ImageIcon, AlertCircle, Clock } from "lucide-react"
-import Image from "next/image"
-import { isPremiumUser } from "@/utils/premium-storage"
 import OpenAIDiagnostics from "./openai-diagnostics"
 
 interface AIIllustratedStampProps {
@@ -89,7 +87,7 @@ export default function AIIllustratedStamp({
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isTimeoutError, setIsTimeoutError] = useState(false)
-  const isPremium = isPremiumUser()
+  const [isPremium] = useState(true) //isPremiumUser()
   const [retryCount, setRetryCount] = useState(0)
   const [showDiagnostics, setShowDiagnostics] = useState(false)
 
@@ -149,6 +147,9 @@ export default function AIIllustratedStamp({
 
       console.log("Enviando solicitud para generar ilustración")
 
+      // Añadir estos datos a la solicitud
+      //const destinationNames = destinations.map((d) => d.name).join(", ")
+
       try {
         // Llamada a la API de generación de imágenes con un timestamp para evitar caché
         const response = await fetch("/api/generate-illustration", {
@@ -161,6 +162,8 @@ export default function AIIllustratedStamp({
             style: selectedStyle,
             creativity: creativity[0],
             isPremium,
+            tripName,
+            destinationNames,
             timestamp: Date.now(), // Añadir timestamp para evitar caché
           }),
         })
@@ -532,28 +535,27 @@ export default function AIIllustratedStamp({
                     </div>
                   </div>
                 ) : (
-                  <Image
-                    src={generatedImage || "/placeholder.svg"}
-                    alt={`Souvenir ilustrado de ${tripName}`}
-                    width={500}
-                    height={500}
-                    className="w-full h-auto"
-                    unoptimized={true}
-                    crossOrigin="anonymous"
-                    loading="eager"
-                    priority={true} // Añadir esto para cargar la imagen con alta prioridad
-                    onError={(e) => {
-                      console.error("Error al cargar la imagen:", e)
-                      // Si el proxy falla, intentar con la URL original
-                      const imgElement = e.currentTarget as HTMLImageElement
-                      if (imgElement.src !== originalImageUrl) {
-                        console.log("Intentando cargar la imagen original...")
-                        imgElement.src = originalImageUrl
-                      } else {
-                        setError("Error al cargar la imagen generada. Por favor, intenta de nuevo.")
-                      }
-                    }}
-                  />
+                  <div className="relative aspect-square">
+                    {generatedImage && (
+                      <img
+                        src={generatedImage || "/placeholder.svg"}
+                        alt={`Souvenir ilustrado de ${tripName}`}
+                        className="w-full h-auto"
+                        crossOrigin="anonymous"
+                        onError={(e) => {
+                          console.error("Error al cargar la imagen:", e)
+                          // Si el proxy falla, intentar con la URL original
+                          const imgElement = e.currentTarget
+                          if (imgElement.src !== originalImageUrl) {
+                            console.log("Intentando cargar la imagen original...")
+                            imgElement.src = originalImageUrl
+                          } else {
+                            setError("Error al cargar la imagen generada. Por favor, intenta de nuevo.")
+                          }
+                        }}
+                      />
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -594,6 +596,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 

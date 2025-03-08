@@ -1,6 +1,5 @@
-import { NextResponse } from "next/server"
-
 export const runtime = "nodejs"
+export const dynamic = "force-dynamic" // No cachear esta ruta
 
 // Función para verificar si una URL es válida
 function isValidUrl(url: string) {
@@ -20,35 +19,68 @@ export async function GET(request: Request) {
 
     if (!imageUrl) {
       console.error("URL de imagen no proporcionada")
-      return NextResponse.json({ error: "URL de imagen no proporcionada" }, { status: 400 })
+      return new Response(JSON.stringify({ error: "URL de imagen no proporcionada" }), {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, OPTIONS",
+          "Access-Control-Allow-Headers": "*",
+        },
+      })
     }
 
     if (!isValidUrl(imageUrl)) {
       console.error("URL de imagen inválida:", imageUrl)
-      return NextResponse.json({ error: "URL de imagen inválida" }, { status: 400 })
+      return new Response(JSON.stringify({ error: "URL de imagen inválida" }), {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, OPTIONS",
+          "Access-Control-Allow-Headers": "*",
+        },
+      })
     }
 
     console.log("Proxy de imagen solicitado para:", imageUrl.substring(0, 100) + "...")
 
-    // Descargar la imagen desde la URL proporcionada
-    const imageResponse = await fetch(imageUrl, {
+    // Configurar opciones de fetch para evitar problemas de CORS y cookies
+    const fetchOptions: RequestInit = {
+      method: "GET",
       headers: {
         Accept: "image/*",
+        "User-Agent": "Mozilla/5.0 (compatible; ProxyService/1.0)",
       },
-    })
+      redirect: "follow",
+      credentials: "omit", // No enviar cookies
+      cache: "no-store", // No usar caché
+    }
+
+    // Descargar la imagen desde la URL proporcionada
+    const imageResponse = await fetch(imageUrl, fetchOptions)
 
     if (!imageResponse.ok) {
       console.error("Error al obtener la imagen:", {
         status: imageResponse.status,
         statusText: imageResponse.statusText,
       })
-      return NextResponse.json(
-        {
+
+      return new Response(
+        JSON.stringify({
           error: "No se pudo obtener la imagen",
           status: imageResponse.status,
           statusText: imageResponse.statusText,
+        }),
+        {
+          status: 502,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+          },
         },
-        { status: 502 },
       )
     }
 
@@ -57,49 +89,48 @@ export async function GET(request: Request) {
     const imageBuffer = await imageResponse.arrayBuffer()
 
     // Crear una respuesta con los headers correctos
-    const headers = new Headers({
+    const responseHeaders = {
       "Content-Type": contentType,
-      "Cache-Control": "public, max-age=86400",
-      "Access-Control-Allow-Origin": "https://www.travelprint.me",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      Pragma: "no-cache",
+      Expires: "0",
+      "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, OPTIONS",
       "Access-Control-Allow-Headers": "*",
-      // Prevenir que se envíen cookies
-      "Set-Cookie": "",
-    })
+      "Cross-Origin-Resource-Policy": "cross-origin",
+      "Cross-Origin-Embedder-Policy": "credentialless",
+    }
 
-    // Crear la respuesta con el buffer de la imagen y los headers
-    const response = new NextResponse(imageBuffer, {
+    // Crear la respuesta directamente con Response en lugar de NextResponse
+    return new Response(imageBuffer, {
       status: 200,
-      headers,
+      headers: responseHeaders,
     })
-
-    return response
   } catch (error) {
     console.error("Error en proxy de imagen:", error)
 
     // Asegurarnos de que los headers CORS estén presentes incluso en caso de error
-    const errorResponse = NextResponse.json(
-      {
+    return new Response(
+      JSON.stringify({
         error: "Error al procesar la imagen",
         details: error instanceof Error ? error.message : String(error),
-      },
+      }),
       {
         status: 500,
         headers: {
-          "Access-Control-Allow-Origin": "https://www.travelprint.me",
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Methods": "GET, OPTIONS",
           "Access-Control-Allow-Headers": "*",
         },
       },
     )
-
-    return errorResponse
   }
 }
 
 // Manejador OPTIONS para CORS preflight
 export async function OPTIONS(request: Request) {
-  return new NextResponse(null, {
+  return new Response(null, {
     status: 204,
     headers: {
       "Access-Control-Allow-Origin": "*",
@@ -109,6 +140,8 @@ export async function OPTIONS(request: Request) {
     },
   })
 }
+
+
 
 
 

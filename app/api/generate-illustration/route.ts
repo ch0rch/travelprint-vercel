@@ -15,6 +15,9 @@ const SAMPLE_IMAGES = {
 // Modo de respaldo si la API de OpenAI falla
 let USE_FALLBACK = false
 
+// Aumentar el tiempo de espera a 25 segundos (dejando margen para el límite de Vercel)
+const TIMEOUT_DURATION = 25000
+
 // Función para verificar si la API key de OpenAI está configurada
 function isOpenAIKeyConfigured() {
   const apiKey = process.env.OPENAI_API_KEY
@@ -42,7 +45,7 @@ export async function POST(request: Request) {
       USE_FALLBACK = true
     }
 
-    const { prompt, style, creativity, isPremium } = await request.json()
+    const { prompt, style, creativity, isPremium, tripName, destinationNames } = await request.json()
 
     console.log("Datos recibidos:", { style, creativity, isPremium })
     console.log("Modo de respaldo activo:", USE_FALLBACK)
@@ -90,14 +93,6 @@ export async function POST(request: Request) {
     }
 
     // Base prompt para el estilo de souvenir de viaje (reducido para procesar más rápido)
-    const baseStylePrompt = `
-      Diseña una estampita de viaje estilo souvenir con:
-      - Aspecto de pegatina/sticker para maleta
-      - Estilo de emblema de parque nacional
-      - Colores vibrantes y contornos definidos
-      - Elementos icónicos de los destinos
-      - Formato circular u ovalado
-    `
 
     // Añadir instrucciones específicas según el estilo seleccionado (versión simplificada)
     let styleSpecificPrompt = ""
@@ -130,45 +125,57 @@ export async function POST(request: Request) {
         styleSpecificPrompt = "Estilo de emblema tradicional."
     }
 
+    const baseStylePrompt =
+      `Travel souvenir stamp: ${tripName}. Style: ${styleSpecificPrompt}. Show key landmarks from: ${destinationNames}.`.trim()
+
     // Combinar el prompt del usuario con nuestros prompts de estilo (versión más corta)
-    const enhancedPrompt = `
-      ${baseStylePrompt}
-      ${styleSpecificPrompt}
-      
-      Contenido: ${prompt}
-      
-      Creatividad: ${Math.round(creativity * 100)}%
-      
-      IMPORTANTE: Debe parecer un auténtico souvenir de viaje. El texto debe ser únicamente el nombre del viaje y los destinos.
-    `.trim()
+    const enhancedPrompt = `${baseStylePrompt} Make it look like an authentic travel sticker or badge.`
 
     console.log("Configurando solicitud a OpenAI")
     console.log("API Key (primeros 5 caracteres):", process.env.OPENAI_API_KEY?.substring(0, 5) + "...")
 
     try {
-      // Ejecutar la solicitud a OpenAI
+      // Crear un controlador de tiempo de espera
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error("TIMEOUT"))
+        }, TIMEOUT_DURATION)
+      })
+
       const apiKey = process.env.OPENAI_API_KEY
-
-      console.log("Preparando solicitud a OpenAI")
-
       const requestBody = {
         model: "dall-e-3",
         prompt: enhancedPrompt,
         n: 1,
         size: "1024x1024",
-        quality: "standard", // Cambiar a "standard" en lugar de "hd" para respuestas más rápidas
-        style: "vivid",
+        quality: "standard",
       }
 
-      console.log("Enviando solicitud a OpenAI")
-
-      const openaiResponse = await fetch("https://api.openai.com/v1/images/generations", {
+      // Ejecutar la solicitud a OpenAI con un límite de tiempo
+      const openaiPromise = fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify(requestBody),
+      })
+
+      // Usar Promise.race para implementar el timeout
+      const openaiResponse = await Promise.race([openaiPromise, timeoutPromise]).catch((error) => {
+        if (error.message === "TIMEOUT") {
+          console.log("La solicitud excedió el tiempo límite, usando respaldo")
+          // Usar imagen de respaldo
+          const fallbackImageUrl = SAMPLE_IMAGES[style as keyof typeof SAMPLE_IMAGES] || SAMPLE_IMAGES.watercolor
+          return new Response(
+            JSON.stringify({
+              imageUrl: fallbackImageUrl,
+              note: "Usando imagen de ejemplo debido a tiempo de espera excedido",
+              error: "La solicitud excedió el tiempo límite",
+            }),
+          )
+        }
+        throw error
       })
 
       console.log("Respuesta de OpenAI recibida. Status:", openaiResponse.status)
@@ -201,22 +208,14 @@ export async function POST(request: Request) {
 
       console.log("URL original de imagen generada:", originalImageUrl.substring(0, 100) + "...")
 
-      // Crear una URL proxy para evitar problemas de CORS
-      const baseUrl = process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-
-      const proxyUrl = `${baseUrl}/api/proxy-image?url=${encodeURIComponent(originalImageUrl)}`
-
-      console.log("URL proxy generada:", proxyUrl.substring(0, 100) + "...")
-
+      // Devolver directamente la URL original en lugar de usar el proxy
       return NextResponse.json({
-        imageUrl: proxyUrl,
+        imageUrl: originalImageUrl,
         originalImageUrl: originalImageUrl,
         revised_prompt: data.data?.[0]?.revised_prompt || enhancedPrompt,
       })
-    } catch (openaiError) {
-      console.error("Error en la llamada a OpenAI:", openaiError)
+    } catch (error: any) {
+      console.error("Error en la llamada a OpenAI:", error)
 
       // Si hay un error con la API de OpenAI, usar el modo de respaldo
       console.log("Usando modo de respaldo por error en OpenAI")
@@ -230,10 +229,10 @@ export async function POST(request: Request) {
       return NextResponse.json({
         imageUrl: fallbackImageUrl,
         note: "Usando imagen de ejemplo debido a un error con OpenAI",
-        error: openaiError instanceof Error ? openaiError.message : String(openaiError),
+        error: error instanceof Error ? error.message : String(error),
         debug: {
-          errorType: openaiError instanceof Error ? openaiError.name : "Unknown",
-          stack: openaiError instanceof Error ? openaiError.stack : undefined,
+          errorType: error instanceof Error ? error.name : "Unknown",
+          stack: error instanceof Error ? error.stack : undefined,
         },
       })
     }
@@ -293,6 +292,8 @@ export async function POST(request: Request) {
     )
   }
 }
+
+
 
 
 
