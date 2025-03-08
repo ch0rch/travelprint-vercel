@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 
+export const runtime = "nodejs" // Force Node.js runtime
+
 export async function GET(request: Request) {
   try {
     // Obtener la URL de la imagen de los parámetros de consulta
@@ -15,7 +17,6 @@ export async function GET(request: Request) {
     // Descargar la imagen desde la URL proporcionada
     const imageResponse = await fetch(imageUrl, {
       headers: {
-        // Algunos headers que pueden ayudar con CORS y caché
         Accept: "image/*",
         "Cache-Control": "no-cache",
       },
@@ -37,13 +38,24 @@ export async function GET(request: Request) {
     const contentType = imageResponse.headers.get("content-type") || "image/png"
     const imageBuffer = await imageResponse.arrayBuffer()
 
-    // Devolver la imagen con el tipo de contenido correcto
-    return new NextResponse(imageBuffer, {
+    // Crear una respuesta con los headers correctos para CORS y cookies
+    const response = new NextResponse(imageBuffer, {
+      status: 200,
       headers: {
         "Content-Type": contentType,
-        "Cache-Control": "public, max-age=86400", // Cachear por 24 horas
+        "Cache-Control": "public, max-age=86400",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        // Prevenir que se envíen cookies
+        "Set-Cookie": "",
       },
     })
+
+    // Eliminar cualquier cookie que pudiera estar presente
+    response.headers.delete("Set-Cookie")
+
+    return response
   } catch (error) {
     console.error("Error en proxy de imagen:", error)
     return NextResponse.json(
@@ -55,4 +67,19 @@ export async function GET(request: Request) {
     )
   }
 }
+
+// Añadir manejador OPTIONS para CORS preflight
+export async function OPTIONS(request: Request) {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Max-Age": "86400",
+    },
+  })
+}
+
+
 

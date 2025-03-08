@@ -360,6 +360,9 @@ export default function AIIllustratedStamp({
     anime: "https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=1000&auto=format&fit=crop",
   }
 
+  // Guarda la URL original antes de que pueda ser modificada por el proxy
+  const originalImageUrl = generatedImage || "/placeholder.svg"
+
   return (
     <Card className="w-full">
       <CardContent className="p-6">
@@ -535,9 +538,15 @@ export default function AIIllustratedStamp({
                     width={500}
                     height={500}
                     className="w-full h-auto"
-                    unoptimized={true} // Importante para URLs externas y proxy
+                    unoptimized={true}
+                    crossOrigin="anonymous" // Añadir esto
+                    loading="eager" // Añadir esto
                     onError={(e) => {
                       console.error("Error al cargar la imagen:", e)
+                      // Intentar cargar la imagen original si el proxy falla
+                      if (e.currentTarget.src !== originalImageUrl) {
+                        e.currentTarget.src = originalImageUrl
+                      }
                       setError("Error al cargar la imagen generada. Por favor, intenta de nuevo.")
                     }}
                   />
@@ -581,6 +590,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 
