@@ -88,7 +88,7 @@ export default function AIIllustratedStamp({
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isTimeoutError, setIsTimeoutError] = useState(false)
-  const [isPremium = isPremiumUser()\
+  const [isPremium, setIsPremium] = useState(isPremiumUser())
   const [retryCount, setRetryCount] = useState(0)
   const [showDiagnostics, setShowDiagnostics] = useState(false)
   const [imageId, setImageId] = useState<string | null>(null)
@@ -586,6 +586,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 
