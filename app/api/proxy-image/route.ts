@@ -60,7 +60,7 @@ export async function GET(request: Request) {
     const headers = new Headers({
       "Content-Type": contentType,
       "Cache-Control": "public, max-age=86400",
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": "https://www.travelprint.me",
       "Access-Control-Allow-Methods": "GET, OPTIONS",
       "Access-Control-Allow-Headers": "*",
       // Prevenir que se envíen cookies
@@ -86,7 +86,7 @@ export async function GET(request: Request) {
       {
         status: 500,
         headers: {
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": "https://www.travelprint.me",
           "Access-Control-Allow-Methods": "GET, OPTIONS",
           "Access-Control-Allow-Headers": "*",
         },
