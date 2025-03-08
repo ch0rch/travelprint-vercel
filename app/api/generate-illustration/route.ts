@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     // 1. No hay API key válida
     // 2. El modo de respaldo está activado por errores previos
     // 3. Estamos en un entorno de desarrollo (opcional, para pruebas rápidas)
-    const useImmediateFallback = !isApiKeyValid || USE_FALLBACK || process.env.NODE_ENV === "development"
+    const useImmediateFallback = !isApiKeyValid || USE_FALLBACK
 
     if (useImmediateFallback) {
       console.log("Usando modo de respaldo inmediato con imágenes de ejemplo")
@@ -88,16 +88,6 @@ export async function POST(request: Request) {
         },
       })
     }
-
-    // Crear un controlador de tiempo de espera para evitar que la función serverless agote su tiempo
-    const timeoutPromise = new Promise((_, reject) => {
-      const timeoutId = setTimeout(() => {
-        reject(new Error("La solicitud a OpenAI ha excedido el tiempo de espera"))
-      }, 8000) // 8 segundos de tiempo de espera, ajustar según sea necesario
-
-      // Limpiar el timeout si la promesa se resuelve antes
-      return () => clearTimeout(timeoutId)
-    })
 
     // Base prompt para el estilo de souvenir de viaje (reducido para procesar más rápido)
     const baseStylePrompt = `
@@ -152,11 +142,11 @@ export async function POST(request: Request) {
       IMPORTANTE: Debe parecer un auténtico souvenir de viaje. El texto debe ser únicamente el nombre del viaje y los destinos.
     `.trim()
 
-    console.log("Configurando solicitud a OpenAI con timeout")
+    console.log("Configurando solicitud a OpenAI")
     console.log("API Key (primeros 5 caracteres):", process.env.OPENAI_API_KEY?.substring(0, 5) + "...")
 
     try {
-      // Ejecutar la solicitud a OpenAI con un límite de tiempo
+      // Ejecutar la solicitud a OpenAI
       const apiKey = process.env.OPENAI_API_KEY
 
       console.log("Preparando solicitud a OpenAI")
@@ -170,7 +160,7 @@ export async function POST(request: Request) {
         style: "vivid",
       }
 
-      console.log("Cuerpo de la solicitud:", JSON.stringify(requestBody))
+      console.log("Enviando solicitud a OpenAI")
 
       const openaiResponse = await fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
@@ -182,17 +172,16 @@ export async function POST(request: Request) {
       })
 
       console.log("Respuesta de OpenAI recibida. Status:", openaiResponse.status)
-      console.log("Headers:", Object.fromEntries(openaiResponse.headers.entries()))
 
       // Capturar el texto completo de la respuesta
       const responseText = await openaiResponse.text()
-      console.log("Texto de respuesta completo:", responseText)
+      console.log("Texto de respuesta recibido, longitud:", responseText.length)
 
       // Intentar parsear como JSON
       let data
       try {
         data = JSON.parse(responseText)
-        console.log("Datos parseados:", JSON.stringify(data, null, 2))
+        console.log("Datos parseados correctamente")
       } catch (parseError) {
         console.error("Error al parsear JSON:", parseError)
         throw new Error(`La respuesta no es un JSON válido: ${responseText.substring(0, 200)}`)
@@ -203,15 +192,29 @@ export async function POST(request: Request) {
         throw new Error(`Error de OpenAI (${openaiResponse.status}): ${JSON.stringify(data)}`)
       }
 
-      const imageUrl = data.data?.[0]?.url
+      const originalImageUrl = data.data?.[0]?.url
 
-      if (!imageUrl) {
+      if (!originalImageUrl) {
         console.error("No se encontró URL de imagen en la respuesta:", JSON.stringify(data))
         throw new Error("No se pudo generar la imagen: URL no encontrada en respuesta")
       }
 
-      console.log("URL de imagen generada:", imageUrl)
-      return NextResponse.json({ imageUrl })
+      console.log("URL original de imagen generada:", originalImageUrl.substring(0, 100) + "...")
+
+      // Crear una URL proxy para evitar problemas de CORS
+      const baseUrl = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+
+      const proxyUrl = `${baseUrl}/api/proxy-image?url=${encodeURIComponent(originalImageUrl)}`
+
+      console.log("URL proxy generada:", proxyUrl.substring(0, 100) + "...")
+
+      return NextResponse.json({
+        imageUrl: proxyUrl,
+        originalImageUrl: originalImageUrl,
+        revised_prompt: data.data?.[0]?.revised_prompt || enhancedPrompt,
+      })
     } catch (openaiError) {
       console.error("Error en la llamada a OpenAI:", openaiError)
 
@@ -290,6 +293,8 @@ export async function POST(request: Request) {
     )
   }
 }
+
+
 
 
 

@@ -150,7 +150,7 @@ export default function AIIllustratedStamp({
       console.log("Enviando solicitud para generar ilustración")
 
       try {
-        // Llamada a la API de generación de imágenes con un timeout más largo
+        // Llamada a la API de generación de imágenes con un timestamp para evitar caché
         const response = await fetch("/api/generate-illustration", {
           method: "POST",
           headers: {
@@ -163,7 +163,6 @@ export default function AIIllustratedStamp({
             isPremium,
             timestamp: Date.now(), // Añadir timestamp para evitar caché
           }),
-          // No usar AbortController aquí para permitir que el servidor maneje el timeout
         })
 
         console.log("Respuesta recibida:", response.status, response.statusText)
@@ -210,34 +209,25 @@ export default function AIIllustratedStamp({
           }
         }
 
-        // Verificar el tipo de contenido
-        const contentType = response.headers.get("content-type") || ""
-        console.log("Tipo de contenido de respuesta:", contentType)
-
-        if (!contentType.includes("application/json")) {
-          console.error("La respuesta no es JSON:", contentType)
-          throw new Error(`Respuesta inesperada del servidor: formato no válido`)
-        }
-
         // Ahora intentamos parsear el JSON con manejo de errores
         let data
         try {
           const responseText = await response.text()
-          console.log("Texto de respuesta:", responseText.substring(0, 200) + "...")
+          console.log("Texto de respuesta recibido, longitud:", responseText.length)
           data = JSON.parse(responseText)
         } catch (e) {
           console.error("Error al parsear JSON:", e)
           throw new Error("Error al procesar la respuesta del servidor. La respuesta no es un JSON válido.")
         }
 
-        console.log("Datos de respuesta:", data)
+        console.log("Datos de respuesta recibidos:", data)
 
         if (!data.imageUrl) {
           console.error("No se recibió URL de imagen en la respuesta:", data)
           throw new Error("No se recibió URL de imagen en la respuesta")
         }
 
-        console.log("Imagen generada correctamente:", data.imageUrl.substring(0, 50) + "...")
+        console.log("Imagen generada correctamente:", data.imageUrl)
         setGeneratedImage(data.imageUrl)
 
         // Si hay una nota de respaldo, mostrarla como advertencia
@@ -545,6 +535,11 @@ export default function AIIllustratedStamp({
                     width={500}
                     height={500}
                     className="w-full h-auto"
+                    unoptimized={true} // Importante para URLs externas y proxy
+                    onError={(e) => {
+                      console.error("Error al cargar la imagen:", e)
+                      setError("Error al cargar la imagen generada. Por favor, intenta de nuevo.")
+                    }}
                   />
                 )}
               </div>
@@ -586,6 +581,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 
