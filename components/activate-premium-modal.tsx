@@ -1,21 +1,17 @@
 "use client"
 
 import { useState } from "react"
-import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Button,
-  useDisclosure,
-  Input,
-} from "@nextui-org/react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { verifyAndSavePremiumStatus } from "@/utils/premium-storage"
 import { updateCreditsFromLicense } from "@/utils/credits-storage"
 
-export default function ActivatePremiumModal() {
-  const { isOpen, onOpen, onClose } = useDisclosure()
+interface ActivatePremiumModalProps {
+  onClose: () => void
+}
+
+export default function ActivatePremiumModal({ onClose }: ActivatePremiumModalProps) {
   const [licenseKey, setLicenseKey] = useState("")
   const [isVerifying, setIsVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -75,44 +71,41 @@ export default function ActivatePremiumModal() {
   }
 
   return (
-    <>
-      <Button onPress={onOpen} color="primary">
-        Activar Premium
-      </Button>
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader className="flex flex-col gap-1">Activar Cuenta Premium</ModalHeader>
-              <ModalBody>
-                {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
-                {success && (
-                  <div className="text-green-500 text-sm mb-4">Licencia activada con éxito! Recargando...</div>
-                )}
-                <Input
-                  isDisabled={isVerifying || success}
-                  type="text"
-                  label="Clave de Licencia"
-                  placeholder="Ingresa tu clave de licencia"
-                  value={licenseKey}
-                  onChange={(e) => setLicenseKey(e.target.value)}
-                />
-              </ModalBody>
-              <ModalFooter>
-                <Button color="danger" variant="flat" onPress={onClose}>
-                  Cancelar
-                </Button>
-                <Button color="primary" onPress={handleActivate} isLoading={isVerifying} isDisabled={success}>
-                  Activar
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
-    </>
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Activar Cuenta Premium</DialogTitle>
+        </DialogHeader>
+        <div className="py-4">
+          {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+          {success && <div className="text-green-500 text-sm mb-4">Licencia activada con éxito! Recargando...</div>}
+          <Input
+            disabled={isVerifying || success}
+            type="text"
+            placeholder="Ingresa tu clave de licencia"
+            value={licenseKey}
+            onChange={(e) => setLicenseKey(e.target.value)}
+            className="mb-4"
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={isVerifying}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleActivate}
+            disabled={isVerifying || success}
+            className={isVerifying ? "opacity-70" : ""}
+          >
+            {isVerifying ? "Verificando..." : "Activar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
+
+
 
 
 
