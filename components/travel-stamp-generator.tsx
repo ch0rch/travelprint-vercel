@@ -21,6 +21,7 @@ import {
   Sparkles,
   Palette,
   Share2,
+  X,
 } from "lucide-react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
@@ -32,6 +33,7 @@ import ExpiryReminderModal from "@/components/expiry-reminder-modal"
 import ActivatePremiumModal from "@/components/activate-premium-modal"
 import ShareModal from "@/components/share-modal"
 import AIIllustratedStamp from "./ai-illustrated-stamp"
+import { Badge } from "@/components/ui/badge"
 
 // Normalmente usaríamos una variable de entorno, pero para el prototipo usamos un token público
 mapboxgl.accessToken = "pk.eyJ1Ijoiam9yamVyb2phcyIsImEiOiJjbTd2eG42bXYwMTNlMm1vcWRycWpicmRhIn0.hDwomrUtCTWGe0gtLHil2Q"
@@ -825,6 +827,39 @@ export default function TravelStampGenerator() {
     document.body.removeChild(link)
   }
 
+  // Modal para la sección de IA
+  const renderAIModal = () => {
+    if (!showAITab) return null
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="sticky top-0 bg-white p-4 border-b flex justify-between items-center z-10">
+            <h2 className="text-xl font-bold flex items-center">
+              <Sparkles className="h-5 w-5 mr-2 text-amber-500" />
+              Crea tu Souvenir Ilustrado con IA
+            </h2>
+            <Button variant="ghost" size="sm" onClick={() => setShowAITab(false)}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+          <div className="p-6">
+            {showAITab && (
+              <AIIllustratedStamp
+                tripName={tripName}
+                destinations={destinations}
+                tripDate={tripDate}
+                tripComment={tripComment}
+                onDownload={downloadAIGeneratedImage}
+                onOpenPremium={() => setShowPremiumModal(true)}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-6">
@@ -1114,132 +1149,82 @@ export default function TravelStampGenerator() {
                 <p className="text-amber-800">Añade al menos dos destinos para generar tu estampita</p>
               </div>
             ) : (
-              <Tabs defaultValue="map">
-                <TabsList className="w-full mb-4">
-                  <TabsTrigger value="map">Mapa</TabsTrigger>
-                  <TabsTrigger value="ai" onClick={() => setShowAITab(true)}>
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    Souvenir IA
-                  </TabsTrigger>
-                </TabsList>
+              <div className="space-y-6">
+                {/* Vista previa del mapa siempre visible */}
+                <div className={getPreviewClasses()} ref={previewContainerRef}>
+                  <div
+                    className={`border-2 rounded-lg overflow-hidden ${borderColor} ${getFormatClasses()} relative shadow-xl`}
+                    style={{ backgroundColor: backgroundColor }}
+                  >
+                    {/* Esquinas decorativas */}
+                    <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-amber-800/20 rounded-tl-lg" />
+                    <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-amber-800/20 rounded-tr-lg" />
+                    <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-amber-800/20 rounded-bl-lg" />
+                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-amber-800/20 rounded-br-lg" />
 
-                <TabsContent value="map">
-                  <div className={getPreviewClasses()} ref={previewContainerRef}>
-                    <div
-                      className={`border-2 rounded-lg overflow-hidden ${borderColor} ${getFormatClasses()} relative shadow-xl`}
-                      style={{ backgroundColor: backgroundColor }}
-                    >
-                      {/* Esquinas decorativas */}
-                      <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-amber-800/20 rounded-tl-lg" />
-                      <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-amber-800/20 rounded-tr-lg" />
-                      <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-amber-800/20 rounded-bl-lg" />
-                      <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-amber-800/20 rounded-br-lg" />
+                    {/* Contenido */}
+                    <div className="relative z-10 flex flex-col h-full">
+                      {/* Contenedor del mapa sin margin/padding bottom */}
+                      <div ref={previewMapRef} className={`${getMapClasses()} relative`} />
 
-                      {/* Contenido */}
-                      <div className="relative z-10 flex flex-col h-full">
-                        {/* Contenedor del mapa sin margin/padding bottom */}
-                        <div ref={previewMapRef} className={`${getMapClasses()} relative`} />
-
-                        {/* Contenedor inferior con altura fija y mejor distribución */}
-                        <div className="flex-grow flex flex-col justify-between bg-transparent">
-                          <div className="space-y-3 p-4">
-                            <div className="text-center">
-                              <h3 className={`font-serif font-bold text-lg tracking-wide ${textColor}`}>{tripName}</h3>
-                              {tripDate && (
-                                <p className={`text-sm ${textColor} font-medium opacity-75 mt-1`}>{tripDate}</p>
-                              )}
-                            </div>
-
-                            {tripComment && isPremium && (
-                              <div className="px-2">
-                                <div className="relative">
-                                  <span className={`absolute left-0 top-0 ${textColor} opacity-30 text-lg`}>"</span>
-                                  <p
-                                    className={`italic text-[10px] ${textColor} leading-relaxed px-4 break-words max-w-full`}
-                                  >
-                                    {tripComment}
-                                  </p>
-                                  <span className={`absolute right-0 bottom-0 ${textColor} opacity-30 text-lg`}>"</span>
-                                </div>
-                              </div>
+                      {/* Contenedor inferior con altura fija y mejor distribución */}
+                      <div className="flex-grow flex flex-col justify-between bg-transparent">
+                        <div className="space-y-3 p-4">
+                          <div className="text-center">
+                            <h3 className={`font-serif font-bold text-lg tracking-wide ${textColor}`}>{tripName}</h3>
+                            {tripDate && (
+                              <p className={`text-sm ${textColor} font-medium opacity-75 mt-1`}>{tripDate}</p>
                             )}
                           </div>
 
-                          <div className="mt-auto border-t border-amber-800/10 p-2 flex justify-between items-center">
-                            <span className="text-[8px] opacity-70">travelprint.me</span>
-                            <span className="text-[8px] font-medium opacity-70">Mi recuerdo de viaje</span>
-                          </div>
+                          {tripComment && isPremium && (
+                            <div className="px-2">
+                              <div className="relative">
+                                <span className={`absolute left-0 top-0 ${textColor} opacity-30 text-lg`}>"</span>
+                                <p
+                                  className={`italic text-[10px] ${textColor} leading-relaxed px-4 break-words max-w-full`}
+                                >
+                                  {tripComment}
+                                </p>
+                                <span className={`absolute right-0 bottom-0 ${textColor} opacity-30 text-lg`}>"</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-auto border-t border-amber-800/10 p-2 flex justify-between items-center">
+                          <span className="text-[8px] opacity-70">travelprint.me</span>
+                          <span className="text-[8px] font-medium opacity-70">Mi recuerdo de viaje</span>
                         </div>
                       </div>
                     </div>
                   </div>
-                </TabsContent>
+                </div>
 
-                <TabsContent value="ai">
-                  {showAITab && (
-                    <>
-                      {!isPremium ? (
-                        <div className="space-y-4">
-                          <div className="border-2 border-amber-200 rounded-lg overflow-hidden">
-                            <div className="aspect-square bg-amber-50 flex flex-col items-center justify-center p-4">
-                              <Sparkles className="h-12 w-12 text-amber-500 mb-3" />
-                              <h3 className="text-lg font-bold text-amber-800 mb-2">Souvenires de Viaje con IA</h3>
-                              <p className="text-sm text-amber-700 text-center mb-4">
-                                Transforma tus rutas en auténticos souvenires de viaje: pegatinas, emblemas y stickers
-                                generados con IA.
-                              </p>
-
-                              {/* Mostrar ejemplos de estilos */}
-                              <div className="grid grid-cols-2 gap-2 w-full max-w-xs mb-4">
-                                <div className="bg-white rounded border border-amber-200 p-2">
-                                  <div className="aspect-square bg-amber-100 rounded flex items-center justify-center mb-1">
-                                    <span className="text-xs text-amber-800">Postal Vintage</span>
-                                  </div>
-                                </div>
-                                <div className="bg-white rounded border border-amber-200 p-2">
-                                  <div className="aspect-square bg-amber-100 rounded flex items-center justify-center mb-1">
-                                    <span className="text-xs text-amber-800">Emblema</span>
-                                  </div>
-                                </div>
-                                <div className="bg-white rounded border border-amber-200 p-2">
-                                  <div className="aspect-square bg-amber-100 rounded flex items-center justify-center mb-1">
-                                    <span className="text-xs text-amber-800">Sticker</span>
-                                  </div>
-                                </div>
-                                <div className="bg-white rounded border border-amber-200 p-2">
-                                  <div className="aspect-square bg-amber-100 rounded flex items-center justify-center mb-1">
-                                    <span className="text-xs text-amber-800">Parque Nacional</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <Button
-                                onClick={() => setShowPremiumModal(true)}
-                                className="w-full bg-gradient-to-r from-amber-500 to-amber-700"
-                              >
-                                <Crown className="h-4 w-4 mr-2" />
-                                Desbloquear Souvenires IA
-                              </Button>
-                            </div>
-                          </div>
-                          <p className="text-xs text-muted-foreground text-center">
-                            Característica exclusiva para usuarios premium. Crea ilustraciones únicas de tus viajes.
-                          </p>
-                        </div>
-                      ) : (
-                        <AIIllustratedStamp
-                          tripName={tripName}
-                          destinations={destinations}
-                          tripDate={tripDate}
-                          tripComment={tripComment}
-                          onDownload={downloadAIGeneratedImage}
-                          onOpenPremium={() => setShowPremiumModal(true)}
-                        />
-                      )}
-                    </>
-                  )}
-                </TabsContent>
-              </Tabs>
+                {/* Botón destacado para la sección premium */}
+                <div className="mt-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg p-4 border border-amber-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-medium flex items-center">
+                      <Sparkles className="h-4 w-4 text-amber-500 mr-2" />
+                      Souvenirs Ilustrados con IA
+                    </h3>
+                    <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
+                      <Crown className="h-3 w-3 mr-1" />
+                      Premium
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-amber-700 mb-3">
+                    Transforma tu ruta en una ilustración artística única y personalizada.
+                  </p>
+                  <Button
+                    onClick={() => setShowAITab(true)}
+                    className="w-full bg-gradient-to-r from-amber-500 to-amber-700"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Crear Souvenir Ilustrado
+                  </Button>
+                </div>
+              </div>
             )}
             <div className="mt-6 space-y-3">
               <Button
@@ -1282,6 +1267,7 @@ export default function TravelStampGenerator() {
       </div>
 
       {renderPremiumModal()}
+      {renderAIModal()}
       {isPremium && showExpiryReminder && (
         <ExpiryReminderModal onRenew={openLemonSqueezyCheckout} onClose={() => setShowExpiryReminder(false)} />
       )}
@@ -1290,6 +1276,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 

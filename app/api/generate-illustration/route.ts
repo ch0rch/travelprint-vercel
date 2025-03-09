@@ -101,42 +101,49 @@ export async function POST(request: Request) {
       })
     }
 
-    // Añadir instrucciones específicas según el estilo seleccionado (versión simplificada)
+    // Añadir instrucciones específicas según el estilo seleccionado
     let styleSpecificPrompt = ""
     switch (style) {
       case "watercolor":
-        styleSpecificPrompt = "Estilo de acuarela con colores suaves."
+        styleSpecificPrompt = "Watercolor style with soft colors."
         break
       case "vintage-postcard":
-        styleSpecificPrompt = "Diseño de postal vintage años 60."
+        styleSpecificPrompt = "Vintage 60s postcard design."
         break
       case "pencil-sketch":
-        styleSpecificPrompt = "Dibujo a lápiz, estilo boceto."
+        styleSpecificPrompt = "Pencil sketch, travel journal style."
         break
       case "digital-art":
-        styleSpecificPrompt = "Arte digital moderno y vibrante."
+        styleSpecificPrompt = "Modern digital art with vibrant colors."
         break
       case "oil-painting":
-        styleSpecificPrompt = "Estilo pintura al óleo."
+        styleSpecificPrompt = "Oil painting style."
         break
       case "minimalist":
-        styleSpecificPrompt = "Diseño minimalista, líneas simples."
+        styleSpecificPrompt = "Minimalist design with simple lines."
         break
       case "geometric":
-        styleSpecificPrompt = "Formas geométricas abstractas."
+        styleSpecificPrompt = "Abstract geometric shapes."
         break
       case "anime":
-        styleSpecificPrompt = "Estilo anime colorido."
+        styleSpecificPrompt = "Colorful anime style."
         break
       default:
-        styleSpecificPrompt = "Estilo de emblema tradicional."
+        styleSpecificPrompt = "Traditional emblem style."
     }
 
-    const baseStylePrompt =
-      `Travel souvenir stamp: ${tripName}. Style: ${styleSpecificPrompt}. Show key landmarks from: ${destinationNames}.`.trim()
+    // Crear un prompt más específico y controlado
+    const enhancedPrompt = `
+Create a travel souvenir illustration for "${tripName}" in ${styleSpecificPrompt}
+Featuring iconic visual elements from: ${destinationNames}.
 
-    // Combinar el prompt del usuario con nuestros prompts de estilo (versión más corta)
-    const enhancedPrompt = `${baseStylePrompt} Make it look like an authentic travel sticker or badge.`
+IMPORTANT INSTRUCTIONS:
+1. The title "${tripName}" should be the ONLY text prominently displayed.
+2. DO NOT include any additional text, words, or descriptions in the illustration.
+3. Create a visual representation inspired by these locations and their landscapes.
+4. Focus on creating iconic visual elements representing the destinations.
+5. Make it look like an authentic travel sticker, badge, or souvenir.
+`.trim()
 
     console.log("Configurando solicitud a OpenAI")
     console.log("API Key (primeros 5 caracteres):", process.env.OPENAI_API_KEY?.substring(0, 5) + "...")
@@ -334,6 +341,8 @@ export async function POST(request: Request) {
     )
   }
 }
+
+
 
 
 

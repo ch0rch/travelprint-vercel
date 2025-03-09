@@ -72,6 +72,25 @@ const artStyles = [
   },
 ]
 
+// Ejemplos de ilustraciones para mostrar como inspiración
+const inspirationExamples = [
+  {
+    style: "watercolor",
+    imageUrl: "https://res.cloudinary.com/demo/image/upload/v1631234567/travel-stamps/example_watercolor.jpg",
+    title: "Ruta de los Lagos",
+  },
+  {
+    style: "vintage-postcard",
+    imageUrl: "https://res.cloudinary.com/demo/image/upload/v1631234567/travel-stamps/example_vintage.jpg",
+    title: "Costa Mediterránea",
+  },
+  {
+    style: "pencil-sketch",
+    imageUrl: "https://res.cloudinary.com/demo/image/upload/v1631234567/travel-stamps/example_sketch.jpg",
+    title: "Camino de Santiago",
+  },
+]
+
 export default function AIIllustratedStamp({
   tripName,
   destinations,
@@ -126,25 +145,47 @@ export default function AIIllustratedStamp({
       // Identificar el tipo de paisaje basado en los destinos (ejemplo simple)
       const landscapeType = identifyLandscapeType(destinations)
 
-      // Crear el prompt para la IA (versión simplificada si es un reintento)
+      // Extraer solo los nombres de ciudades/países de los destinos
+      const extractLocationNames = (destinations) => {
+        return destinations.map((dest) => {
+          // Dividir el nombre por comas y tomar solo la primera parte (ciudad)
+          // o la última parte (país) si está disponible
+          const parts = dest.name.split(",")
+          if (parts.length > 1) {
+            // Si hay múltiples partes, tomar la ciudad y el país
+            const city = parts[0].trim()
+            const country = parts[parts.length - 1].trim()
+            return city !== country ? `${city}, ${country}` : city
+          }
+          return dest.name.trim()
+        })
+      }
+
+      const locationNames = extractLocationNames(destinations).join(", ")
+
+      // Crear el prompt para la IA
       let prompt
 
       if (useSimplifiedPrompt) {
         // Versión muy simplificada para evitar tiempos de espera
-        prompt = `Souvenir de viaje para "${tripName}" con destinos: ${destinationNames}.`
+        prompt = `Travel souvenir for "${tripName}". Locations: ${locationNames}.`
       } else {
         prompt = `
-        Crea una estampita de viaje para "${tripName}" que recorre ${destinationNames}.
-        
-        Detalles del viaje:
-        - Distancia: ${distanceKm} kilómetros
-        - Fecha: ${tripDate || "No especificada"}
-        - Tipo de paisaje: ${landscapeType}
-        ${tripComment ? `- Historia del viaje: ${tripComment}` : ""}
-        ${additionalPrompt ? `- Elementos a incluir: ${additionalPrompt}` : ""}
-        
-        El nombre "${tripName}" debe aparecer prominentemente en la estampita.
-      `
+  Create a travel souvenir illustration for "${tripName}".
+  
+  Travel details:
+  - Locations: ${locationNames}
+  - Distance: ${distanceKm} kilometers
+  
+  IMPORTANT INSTRUCTIONS:
+  1. The title "${tripName}" should be the ONLY text prominently displayed.
+  2. DO NOT include any additional text or words in the illustration.
+  3. Create a visual representation inspired by these locations and their landscapes.
+  4. Use the following as inspiration for the mood and style (but don't include as text): ${tripComment || "A memorable journey"}
+  5. Focus on creating iconic visual elements representing the destinations.
+  
+  ${additionalPrompt ? `Additional elements to include: ${additionalPrompt}` : ""}
+  `
       }
 
       console.log("Enviando solicitud para generar ilustración")
@@ -363,7 +404,7 @@ export default function AIIllustratedStamp({
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-bold flex items-center">
             <ImageIcon className="h-5 w-5 mr-2 text-amber-500" />
-            Estampita Ilustrada con IA
+            Souvenir Ilustrado con IA
           </h3>
           {isPremium && (
             <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
@@ -372,6 +413,33 @@ export default function AIIllustratedStamp({
             </span>
           )}
         </div>
+
+        {/* Sección de inspiración - solo mostrar si no hay imagen generada aún */}
+        {!generatedImage && !isGenerating && (
+          <div className="mb-6 bg-amber-50 rounded-lg p-4 border border-amber-200">
+            <h4 className="font-medium text-amber-800 mb-3 flex items-center">
+              <Sparkles className="h-4 w-4 text-amber-500 mr-2" />
+              Transforma tu viaje en arte
+            </h4>
+            <p className="text-sm text-amber-700 mb-4">
+              Nuestra IA creará un souvenir ilustrado único basado en tu ruta y destinos. Selecciona un estilo artístico
+              para comenzar.
+            </p>
+
+            <div className="grid grid-cols-3 gap-2">
+              {inspirationExamples.map((example, index) => (
+                <div key={index} className="rounded-lg overflow-hidden border border-amber-200">
+                  <div className="aspect-square bg-amber-100 flex items-center justify-center text-xs text-amber-500">
+                    [Imagen de ejemplo]
+                  </div>
+                  <div className="p-2 text-center bg-white">
+                    <p className="text-xs font-medium text-amber-800">{example.title}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <Tabs defaultValue="style">
           <TabsList className="w-full mb-4">
@@ -586,6 +654,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 
