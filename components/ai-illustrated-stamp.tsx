@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -10,11 +10,11 @@ import { Input } from "@/components/ui/input"
 import { Crown, Download, RefreshCw, Sparkles, ImageIcon, AlertCircle, Clock } from "lucide-react"
 import { isPremiumUser } from "@/utils/premium-storage"
 import OpenAIDiagnostics from "./openai-diagnostics"
+import { getCurrentCredits, useCredits } from "@/utils/credits-storage"
 
 interface AIIllustratedStampProps {
   tripName: string
-  destinations: { name: string; coordinates: [number, number] }[]
-  tripDate?: string
+  destinations: string[]
   tripComment?: string
   onDownload: (imageUrl: string) => void
   onOpenPremium: () => void
@@ -82,7 +82,6 @@ const inspirationExamples = [
 export default function AIIllustratedStamp({
   tripName,
   destinations,
-  tripDate,
   tripComment,
   onDownload,
   onOpenPremium,
@@ -100,9 +99,22 @@ export default function AIIllustratedStamp({
   const [showDiagnostics, setShowDiagnostics] = useState(false)
   const [imageId, setImageId] = useState<string | null>(null)
 
+  // Añadir estados para créditos
+  const [currentCredits, setCurrentCredits] = useState(getCurrentCredits())
+  const [insufficientCredits, setInsufficientCredits] = useState(false)
+
+  // Actualizar créditos al cargar el componente
+  useEffect(() => {
+    setIsPremium(isPremiumUser())
+    setCurrentCredits(getCurrentCredits())
+  }, [])
+
   // Función para generar la estampita ilustrada
   const generateIllustration = async (retry = false) => {
-    if (destinations.length < 2) return
+    if (destinations.length < 2) {
+      setError("Por favor, añade al menos dos destinos para generar una estampita.")
+      return
+    }
 
     // Bloquear completamente la generación para usuarios no premium
     if (!isPremium) {
@@ -110,6 +122,14 @@ export default function AIIllustratedStamp({
       return
     }
 
+    // Verificar si hay suficientes créditos
+    const credits = getCurrentCredits()
+    if (credits < 1) {
+      setInsufficientCredits(true)
+      return
+    }
+
+    setInsufficientCredits(false)
     setIsGenerating(true)
     setIsRegenerating(false)
     setError(null)
@@ -127,46 +147,26 @@ export default function AIIllustratedStamp({
 
     try {
       // Construir la descripción geográfica y contextual del viaje
-      const destinationNames = destinations.map((d) => d.name).join(", ")
-      const distanceKm = calculateDistance(destinations)
-
-      // Identificar el tipo de paisaje basado en los destinos (ejemplo simple)
-      const landscapeType = identifyLandscapeType(destinations)
+      const destinationNames = destinations.join(", ")
 
       // Extraer solo los nombres de ciudades/países de los destinos
-      const extractLocationNames = (destinations) => {
-        return destinations.map((dest) => {
-          // Dividir el nombre por comas y tomar solo la primera parte (ciudad)
-          // o la última parte (país) si está disponible
-          const parts = dest.name.split(",")
-          if (parts.length > 1) {
-            // Si hay múltiples partes, tomar la ciudad y el país
-            const city = parts[0].trim()
-            const country = parts[parts.length - 1].trim()
-            return city !== country ? `${city}, ${country}` : city
-          }
-          return dest.name.trim()
-        })
-      }
-
-      const locationNames = extractLocationNames(destinations).join(", ")
+      const locationNames = destinations.join(", ")
 
       // Crear el prompt para la IA
       let prompt
 
       if (useSimplifiedPrompt) {
         // Versión muy simplificada para evitar tiempos de espera
-        prompt = `Travel souvenir for "${tripName}". Locations: ${locationNames}.`
+        prompt = `Travel souvenir for "${tripName || "My Trip"}". Locations: ${locationNames}.`
       } else {
         prompt = `
-  Create a travel souvenir illustration for "${tripName}".
+  Create a travel souvenir illustration for "${tripName || "My Trip"}".
   
   Travel details:
   - Locations: ${locationNames}
-  - Distance: ${distanceKm} kilometers
   
   IMPORTANT INSTRUCTIONS:
-  1. The title "${tripName}" should be the ONLY text prominently displayed.
+  1. The title "${tripName || "My Trip"}" should be the ONLY text prominently displayed.
   2. DO NOT include any additional text or words in the illustration.
   3. Create a visual representation inspired by these locations and their landscapes.
   4. Use the following as inspiration for the mood and style (but don't include as text): ${tripComment || "A memorable journey"}
@@ -189,7 +189,7 @@ export default function AIIllustratedStamp({
           style: selectedStyle,
           creativity: creativity[0],
           isPremium,
-          tripName,
+          tripName: tripName || "My Trip",
           destinationNames,
           timestamp: Date.now(), // Añadir timestamp para evitar caché
         }),
@@ -260,6 +260,10 @@ export default function AIIllustratedStamp({
       console.log("Imagen generada correctamente:", data.imageUrl)
       setGeneratedImage(data.imageUrl)
 
+      // Después de generar exitosamente, usar un crédito
+      useCredits(1)
+      setCurrentCredits(getCurrentCredits())
+
       // Si hay una nota de respaldo, mostrarla como advertencia
       if (data.note && data.note.includes("respaldo")) {
         setError(
@@ -305,68 +309,15 @@ export default function AIIllustratedStamp({
 
   // Función para regenerar con los mismos parámetros
   const regenerateIllustration = async () => {
+    // Verificar si hay suficientes créditos
+    const credits = getCurrentCredits()
+    if (credits < 1) {
+      setInsufficientCredits(true)
+      return
+    }
+
     setIsRegenerating(true)
     await generateIllustration(true) // Pasar true para indicar que es un reintento
-  }
-
-  // Función para calcular la distancia aproximada entre destinos
-  const calculateDistance = (destinations: { coordinates: [number, number] }[]) => {
-    if (destinations.length < 2) return 0
-
-    let totalDistance = 0
-    for (let i = 0; i < destinations.length - 1; i++) {
-      const from = destinations[i].coordinates
-      const to = destinations[i + 1].coordinates
-
-      // Cálculo aproximado de distancia usando la fórmula de Haversine
-      const R = 6371 // Radio de la Tierra en km
-      const dLat = ((to[1] - from[1]) * Math.PI) / 180
-      const dLon = ((to[0] - from[0]) * Math.PI) / 180
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos((from[1] * Math.PI) / 180) *
-          Math.cos((to[1] * Math.PI) / 180) *
-          Math.sin(dLon / 2) *
-          Math.sin(dLon / 2)
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-      const distance = R * c
-
-      totalDistance += distance
-    }
-
-    return Math.round(totalDistance)
-  }
-
-  // Función para identificar el tipo de paisaje basado en coordenadas
-  const identifyLandscapeType = (destinations: { coordinates: [number, number] }[]) => {
-    // Calcular el centro aproximado de los destinos
-    let avgLat = 0
-    let avgLng = 0
-
-    destinations.forEach((dest) => {
-      avgLat += dest.coordinates[1]
-      avgLng += dest.coordinates[0]
-    })
-
-    avgLat /= destinations.length
-    avgLng /= destinations.length
-
-    // Identificación muy básica basada en coordenadas
-    // En América del Sur
-    if (avgLat < 0 && avgLng < -30) {
-      if (avgLng < -70) return "montañoso con cordilleras"
-      return "costero con playas"
-    }
-    // En Europa
-    else if (avgLat > 35 && avgLat < 60 && avgLng > -10 && avgLng < 40) {
-      return "europeo con ciudades históricas"
-    }
-    // En América del Norte
-    else if (avgLat > 25 && avgLat < 50 && avgLng < -50) {
-      return "bosques y lagos"
-    }
-
-    return "variado con múltiples ecosistemas"
   }
 
   // Obtener el estilo seleccionado
@@ -394,12 +345,17 @@ export default function AIIllustratedStamp({
             <ImageIcon className="h-5 w-5 mr-2 text-amber-500" />
             Souvenir Ilustrado con IA
           </h3>
-          {isPremium && (
+          <div className="flex items-center gap-2">
+            {isPremium && (
+              <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                <Crown className="h-3 w-3 mr-1" />
+                Premium
+              </span>
+            )}
             <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
-              <Crown className="h-3 w-3 mr-1" />
-              Premium
+              {currentCredits} créditos
             </span>
-          )}
+          </div>
         </div>
 
         {/* Sección de inspiración - solo mostrar si no hay imagen generada aún */}
@@ -438,7 +394,7 @@ export default function AIIllustratedStamp({
           <TabsContent value="style">
             <div className="space-y-4">
               <Label>Elige un estilo de souvenir</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {artStyles.map((style) => (
                   <div
                     key={style.id}
@@ -520,6 +476,19 @@ export default function AIIllustratedStamp({
             </div>
           </div>
         )}
+
+        {insufficientCredits && (
+          <div className="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200 flex items-start">
+            <AlertCircle className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">Créditos insuficientes</p>
+              <p className="text-sm text-amber-700">
+                Necesitas al menos 1 crédito para generar una estampita con IA. Compra más créditos para continuar.
+              </p>
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="mt-2">
             <Button
@@ -567,7 +536,7 @@ export default function AIIllustratedStamp({
               ) : (
                 <>
                   <Sparkles className="h-4 w-4 mr-2" />
-                  Generar Souvenir de Viaje
+                  Generar Souvenir de Viaje (1 crédito)
                 </>
               )}
             </Button>
@@ -606,9 +575,14 @@ export default function AIIllustratedStamp({
               </div>
 
               <div className="flex gap-2">
-                <Button onClick={regenerateIllustration} disabled={isRegenerating} variant="outline" className="flex-1">
+                <Button
+                  onClick={regenerateIllustration}
+                  disabled={isRegenerating || currentCredits < 1}
+                  variant="outline"
+                  className="flex-1"
+                >
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  Regenerar
+                  Regenerar (1 crédito)
                 </Button>
                 <Button
                   onClick={() => onDownload(generatedImage)}
@@ -642,6 +616,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 
