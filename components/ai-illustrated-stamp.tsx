@@ -23,52 +23,40 @@ interface AIIllustratedStampProps {
 // Estilos artísticos para la IA con descripciones mejoradas
 const artStyles = [
   {
-    id: "watercolor",
-    name: "Acuarela",
+    id: "vintage-emblem",
+    name: "Emblema Vintage",
+    description: "Estilo retro con bordes ornamentados",
     premium: false,
-    description: "Estilo suave con colores difuminados",
   },
   {
-    id: "vintage-postcard",
-    name: "Postal Vintage",
+    id: "official-stamp",
+    name: "Sello Oficial",
+    description: "Inspirado en sellos de pasaporte",
     premium: false,
-    description: "Como una postal de los años 60",
   },
   {
-    id: "pencil-sketch",
-    name: "Dibujo a Lápiz",
+    id: "modern-postal",
+    name: "Postal Moderna",
+    description: "Diseño minimalista contemporáneo",
     premium: false,
-    description: "Boceto de cuaderno de viaje",
   },
   {
-    id: "digital-art",
-    name: "Arte Digital",
+    id: "national-park",
+    name: "Parque Nacional",
+    description: "Estilo emblema americano clásico",
     premium: true,
-    description: "Moderno con colores vibrantes",
   },
   {
-    id: "oil-painting",
-    name: "Emblema Clásico",
+    id: "art-deco",
+    name: "Art Déco",
+    description: "Elegante con patrones geométricos",
     premium: true,
-    description: "Estilo parque nacional americano",
   },
   {
-    id: "minimalist",
-    name: "Minimalista",
+    id: "japanese",
+    name: "Estilo Japonés",
+    description: "Inspirado en sellos tradicionales",
     premium: true,
-    description: "Diseño simple y elegante",
-  },
-  {
-    id: "geometric",
-    name: "Geométrico",
-    premium: true,
-    description: "Formas abstractas y patrones",
-  },
-  {
-    id: "anime",
-    name: "Sticker Kawaii",
-    premium: true,
-    description: "Estilo anime colorido",
   },
 ]
 
@@ -654,6 +642,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 
