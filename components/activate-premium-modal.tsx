@@ -1,17 +1,21 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import { Crown, CheckCircle, AlertCircle } from "lucide-react"
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  useDisclosure,
+  Input,
+} from "@nextui-org/react"
 import { verifyAndSavePremiumStatus } from "@/utils/premium-storage"
+import { updateCreditsFromLicense } from "@/utils/credits-storage"
 
-interface ActivatePremiumModalProps {
-  onClose: () => void
-}
-
-export default function ActivatePremiumModal({ onClose }: ActivatePremiumModalProps) {
+export default function ActivatePremiumModal() {
+  const { isOpen, onOpen, onClose } = useDisclosure()
   const [licenseKey, setLicenseKey] = useState("")
   const [isVerifying, setIsVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -27,9 +31,34 @@ export default function ActivatePremiumModal({ onClose }: ActivatePremiumModalPr
     setError(null)
 
     try {
-      const result = await verifyAndSavePremiumStatus(licenseKey.trim())
+      const response = await fetch("/api/verify-purchase", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          licenseKey: licenseKey.trim(),
+          timestamp: Date.now(),
+        }),
+      })
 
-      if (result) {
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("Error response from server:", errorText)
+        throw new Error("Error al verificar la licencia")
+      }
+
+      const data = await response.json()
+
+      if (data.success) {
+        // Guardar estado premium
+        const result = await verifyAndSavePremiumStatus(licenseKey.trim())
+
+        // Actualizar créditos
+        if (data.credits) {
+          updateCreditsFromLicense(data.credits)
+        }
+
         setSuccess(true)
         setTimeout(() => {
           window.location.reload()
@@ -46,90 +75,46 @@ export default function ActivatePremiumModal({ onClose }: ActivatePremiumModalPr
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
-      <Card className="max-w-md w-full mx-4">
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center">
-              <Crown className="h-6 w-6 text-amber-500 mr-2" />
-              <h3 className="text-xl font-bold">Activar Premium</h3>
-            </div>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100">
-              &times;
-            </button>
-          </div>
-
-          {success ? (
-            <div className="text-center py-4">
-              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-green-700 mb-2">¡Premium Activado!</h3>
-              <p className="mb-4">Tu cuenta premium ha sido activada correctamente.</p>
-              <p className="text-sm text-muted-foreground">La página se recargará automáticamente...</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <p>
-                Para activar tu cuenta premium, ingresa la clave de licencia que recibiste en tu correo electrónico
-                después de completar la compra.
-              </p>
-
-              <div>
-                <label htmlFor="license-key" className="block text-sm font-medium mb-1">
-                  Clave de Licencia
-                </label>
+    <>
+      <Button onPress={onOpen} color="primary">
+        Activar Premium
+      </Button>
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">Activar Cuenta Premium</ModalHeader>
+              <ModalBody>
+                {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+                {success && (
+                  <div className="text-green-500 text-sm mb-4">Licencia activada con éxito! Recargando...</div>
+                )}
                 <Input
-                  id="license-key"
+                  isDisabled={isVerifying || success}
+                  type="text"
+                  label="Clave de Licencia"
+                  placeholder="Ingresa tu clave de licencia"
                   value={licenseKey}
                   onChange={(e) => setLicenseKey(e.target.value)}
-                  placeholder="Ej: LS-XXXX-XXXX-XXXX-XXXX"
-                  className="w-full"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  La clave de licencia se encuentra en el correo de confirmación de compra.
-                </p>
-              </div>
-
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-md p-3 flex items-start">
-                  <AlertCircle className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
-              )}
-
-              <div className="flex gap-3 pt-2">
-                <Button variant="outline" onClick={onClose} className="flex-1">
+              </ModalBody>
+              <ModalFooter>
+                <Button color="danger" variant="flat" onPress={onClose}>
                   Cancelar
                 </Button>
-                <Button
-                  onClick={handleActivate}
-                  disabled={isVerifying || !licenseKey.trim()}
-                  className="flex-1 bg-gradient-to-r from-amber-500 to-amber-700"
-                >
-                  {isVerifying ? "Verificando..." : "Activar Premium"}
+                <Button color="primary" onPress={handleActivate} isLoading={isVerifying} isDisabled={success}>
+                  Activar
                 </Button>
-              </div>
-
-              <div className="border-t pt-4 mt-4">
-                <h4 className="text-sm font-medium mb-2">¿No encuentras tu clave de licencia?</h4>
-                <p className="text-xs text-muted-foreground">
-                  Revisa tu correo electrónico (incluyendo la carpeta de spam) o contacta a soporte en{" "}
-                  <a href="mailto:soporte@travelprint.me" className="text-amber-600 hover:underline">
-                    soporte@travelprint.me
-                  </a>
-                </p>
-              </div>
-            </div>
+              </ModalFooter>
+            </>
           )}
-        </CardContent>
-      </Card>
-    </div>
+        </ModalContent>
+      </Modal>
+    </>
   )
 }
+
+
 
 
 

@@ -2,35 +2,13 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { MapPin, Sparkles } from "lucide-react"
 import { SiteFooter } from "@/components/site-footer"
+import { HeroSection } from "@/components/hero-section"
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-100">
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-b from-amber-50 to-orange-100 py-20 md:py-32">
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden opacity-10">
-          <div className="absolute top-10 left-10 w-32 h-32 rounded-full border-4 border-amber-700" />
-          <div className="absolute bottom-20 right-10 w-40 h-40 rounded-full border-4 border-amber-700" />
-          <div className="absolute top-1/2 left-1/3 w-24 h-24 rounded-full border-4 border-amber-700" />
-        </div>
-
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-3xl md:text-5xl font-bold text-amber-900 mb-6 leading-tight">
-              Convierte tus aventuras en recuerdos tangibles
-            </h1>
-
-            <h2 className="text-xl md:text-2xl text-amber-800 mb-8">
-              Transforma tus rutas de viaje en estampitas personalizadas que cuentan tu historia
-            </h2>
-
-            <p className="text-amber-700 mb-10 max-w-2xl mx-auto text-lg">
-              Cada viaje traza un camino único sobre el mapa del mundo. TravelPrint.me te permite capturar esas rutas
-              especiales en hermosas estampitas personalizadas que podrás guardar, compartir o coleccionar.
-            </p>
-          </div>
-        </div>
-      </div>
+      <HeroSection />
 
       {/* Product Selection Section */}
       <div className="container mx-auto px-4 py-16">
@@ -162,6 +140,8 @@ export default function Home() {
     </main>
   )
 }
+
+
 
 
 

@@ -1,6 +1,6 @@
 // Claves para almacenamiento local
-const CREDITS_KEY = "userCredits"
-const LICENSE_KEY_KEY = "licenseKey"
+const CREDITS_KEY = "aiCredits"
+const CREDITS_HISTORY_KEY = "aiCreditsHistory"
 
 // Verificar si estamos en el navegador
 const isBrowser = typeof window !== "undefined"
@@ -22,55 +22,99 @@ export function useCredits(amount: number): boolean {
 
   const newBalance = currentCredits - amount
   localStorage.setItem(CREDITS_KEY, newBalance.toString())
+
+  // Registrar en el historial
+  addToHistory({
+    type: "usage",
+    amount,
+    description: "Generación de estampita con IA",
+    timestamp: Date.now(),
+  })
+
   return true
 }
 
 // Función para añadir créditos
-export function addCredits(amount: number): boolean {
+export function addCredits(amount: number, description = "Compra de créditos"): boolean {
   if (!isBrowser) return false
 
   const currentCredits = getCurrentCredits()
   const newBalance = currentCredits + amount
   localStorage.setItem(CREDITS_KEY, newBalance.toString())
+
+  // Registrar en el historial
+  addToHistory({
+    type: "purchase",
+    amount,
+    description,
+    timestamp: Date.now(),
+  })
+
   return true
 }
 
-// Función para verificar y guardar créditos al activar licencia
-export async function verifyAndSaveCredits(licenseKey: string): Promise<boolean> {
-  try {
-    if (!isBrowser) return false
+// Tipo para transacciones de créditos
+interface CreditTransaction {
+  type: "purchase" | "usage" | "bonus" | "refund"
+  amount: number
+  description: string
+  timestamp: number
+}
 
-    const response = await fetch("/api/verify-purchase", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        licenseKey: licenseKey,
-        timestamp: Date.now(),
-      }),
+// Función para añadir al historial
+function addToHistory(transaction: CreditTransaction): void {
+  if (!isBrowser) return
+
+  try {
+    const historyStr = localStorage.getItem(CREDITS_HISTORY_KEY)
+    const history: CreditTransaction[] = historyStr ? JSON.parse(historyStr) : []
+
+    history.push(transaction)
+
+    // Limitar el historial a las últimas 100 transacciones
+    const limitedHistory = history.slice(-100)
+
+    localStorage.setItem(CREDITS_HISTORY_KEY, JSON.stringify(limitedHistory))
+  } catch (error) {
+    console.error("Error al actualizar historial:", error)
+  }
+}
+
+// Función para obtener el historial
+export function getCreditsHistory(): CreditTransaction[] {
+  if (!isBrowser) return []
+
+  try {
+    const historyStr = localStorage.getItem(CREDITS_HISTORY_KEY)
+    return historyStr ? JSON.parse(historyStr) : []
+  } catch (error) {
+    console.error("Error al obtener historial:", error)
+    return []
+  }
+}
+
+// Función para actualizar créditos al activar licencia
+export function updateCreditsFromLicense(credits: number): boolean {
+  if (!isBrowser) return false
+
+  try {
+    // Actualizar créditos
+    localStorage.setItem(CREDITS_KEY, credits.toString())
+
+    // Registrar en el historial
+    addToHistory({
+      type: "purchase",
+      amount: credits,
+      description: "Activación de licencia",
+      timestamp: Date.now(),
     })
 
-    if (!response.ok) return false
-
-    const data = await response.json()
-
-    if (data.success) {
-      // Guardar licencia
-      localStorage.setItem(LICENSE_KEY_KEY, licenseKey)
-
-      // Asignar créditos según el producto
-      // Por defecto, asignar 10 créditos
-      const credits = data.credits || 10
-      localStorage.setItem(CREDITS_KEY, credits.toString())
-
-      return true
-    }
-
-    return false
+    return true
   } catch (error) {
-    console.error("Error verificando licencia:", error)
+    console.error("Error al actualizar créditos:", error)
     return false
   }
 }
+
+
 

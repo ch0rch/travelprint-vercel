@@ -2,6 +2,12 @@ import { NextResponse } from "next/server"
 
 const LEMONSQUEEZY_API_KEY = process.env.LEMONSQUEEZY_API_KEY
 
+// Mapeo de productos a créditos
+const PRODUCT_CREDITS = {
+  "2002abe5-88e1-4541-95f6-8ca287abaa44": 10, // ID del producto de 10 créditos
+  // Puedes añadir más productos aquí si decides crear diferentes paquetes
+}
+
 export async function POST(request: Request) {
   try {
     const { licenseKey } = await request.json()
@@ -16,6 +22,7 @@ export async function POST(request: Request) {
         success: true,
         expiryDate: Date.now() + 90 * 24 * 60 * 60 * 1000, // 90 días desde ahora
         licenseKey: "test123",
+        credits: 10, // Asignar 10 créditos para pruebas
       })
     }
 
@@ -68,8 +75,14 @@ export async function POST(request: Request) {
       )
     }
 
+    // Obtener el ID del producto asociado a la licencia
+    const productId = data.meta?.product_id || ""
+
+    // Asignar créditos según el producto
+    // Por defecto, asignar 10 créditos si no se encuentra el producto
+    const credits = PRODUCT_CREDITS[productId] || 10
+
     // Calcular la fecha de expiración (3 meses desde la activación o usar la fecha proporcionada por LemonSqueezy)
-    // Si LemonSqueezy proporciona una fecha de expiración, usarla
     let expiryDate = Date.now() + 90 * 24 * 60 * 60 * 1000
     if (data.expires_at) {
       expiryDate = new Date(data.expires_at).getTime()
@@ -80,6 +93,7 @@ export async function POST(request: Request) {
       success: true,
       expiryDate: expiryDate,
       licenseKey: licenseKey,
+      credits: credits,
     })
   } catch (error) {
     console.error("Error verifying license:", error)
@@ -103,6 +117,8 @@ export function verifyToken(token: string): boolean {
     return false
   }
 }
+
+
 
 
 
