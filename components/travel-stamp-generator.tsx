@@ -53,6 +53,7 @@ export default function TravelStampGenerator() {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
+  const popupsRef = useRef<mapboxgl.Popup[]>([])
   const [mapStyle, setMapStyle] = useState("streets-v12")
   const [zoom, setZoom] = useState(3)
   const [location, setLocation] = useState("")
@@ -73,6 +74,7 @@ export default function TravelStampGenerator() {
   const [mapError, setMapError] = useState<string | null>(null)
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [debugInfo, setDebugInfo] = useState<string>("")
+  const [isRouteFetching, setIsRouteFetching] = useState(false)
 
   // Verificar estado premium
   useEffect(() => {
@@ -80,38 +82,65 @@ export default function TravelStampGenerator() {
     setRemainingDays(getRemainingDays())
   }, [])
 
+  // Función para obtener la ruta entre dos puntos usando la API de Mapbox Directions
+  const getRoute = async (start: [number, number], end: [number, number]) => {
+    if (!MAPBOX_TOKEN) return null
+
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/directions/v5/mapbox/driving/${start[0]},${start[1]};${end[0]},${end[1]}?geometries=geojson&access_token=${MAPBOX_TOKEN}`,
+      )
+
+      if (!response.ok) throw new Error("Error al obtener la ruta")
+
+      const data = await response.json()
+
+      if (!data.routes || data.routes.length === 0) {
+        console.warn("No se encontró una ruta entre los puntos")
+        return null
+      }
+
+      return data.routes[0].geometry
+    } catch (error) {
+      console.error("Error al obtener la ruta:", error)
+      setDebugInfo((prev) => prev + "\nError al obtener ruta: " + (error as Error).message)
+      return null
+    }
+  }
+
   // Función para actualizar la ruta
-  const updateRoute = useCallback(() => {
+  const updateRoute = useCallback(async () => {
     if (!map.current || locations.length < 2) return
 
     try {
       console.log("🔄 Actualizando ruta con", locations.length, "ubicaciones")
+      setIsRouteFetching(true)
 
-      // Eliminar ruta existente si la hay
-      if (map.current.getLayer("route")) {
-        map.current.removeLayer("route")
+      // Eliminar rutas existentes
+      for (let i = 1; i <= locations.length; i++) {
+        if (map.current.getLayer(`route-${i}`)) {
+          map.current.removeLayer(`route-${i}`)
+        }
+        if (map.current.getSource(`route-${i}`)) {
+          map.current.removeSource(`route-${i}`)
+        }
       }
-      if (map.current.getSource("route")) {
-        map.current.removeSource("route")
-      }
-
-      const coordinates = locations.map((loc) => loc.coordinates)
 
       // Verificar si el estilo está cargado
       if (!map.current.isStyleLoaded()) {
         console.log("⏳ Esperando a que el estilo se cargue completamente...")
-        map.current.once("style.load", () => {
+        map.current.once("style.load", async () => {
           console.log("✅ Estilo cargado, añadiendo ruta ahora")
-          addRouteLayer(coordinates)
+          await addRoutes()
         })
         return
       }
 
-      addRouteLayer(coordinates)
+      await addRoutes()
 
       // Ajustar la vista para mostrar toda la ruta
       const bounds = new mapboxgl.LngLatBounds()
-      coordinates.forEach((coord) => bounds.extend(coord))
+      locations.forEach((loc) => bounds.extend(loc.coordinates))
       map.current.fitBounds(bounds, {
         padding: { top: 50, bottom: 50, left: 50, right: 50 },
         maxZoom: 15,
@@ -119,47 +148,66 @@ export default function TravelStampGenerator() {
     } catch (error) {
       console.error("❌ Error al actualizar la ruta:", error)
       setDebugInfo((prev) => prev + "\nError al actualizar ruta: " + (error as Error).message)
+    } finally {
+      setIsRouteFetching(false)
     }
   }, [locations])
 
-  // Función para añadir la capa de ruta
-  const addRouteLayer = (coordinates: [number, number][]) => {
-    if (!map.current) return
+  // Función para añadir rutas entre todos los puntos
+  const addRoutes = async () => {
+    if (!map.current || locations.length < 2) return
 
-    try {
+    let totalDist = 0
+
+    for (let i = 0; i < locations.length - 1; i++) {
+      const start = locations[i].coordinates
+      const end = locations[i + 1].coordinates
+
+      // Intentar obtener la ruta real entre los puntos
+      const routeGeometry = await getRoute(start, end)
+
+      // Si no se pudo obtener la ruta, usar una línea recta
+      const geojson = {
+        type: "Feature",
+        properties: {},
+        geometry: routeGeometry || {
+          type: "LineString",
+          coordinates: [start, end],
+        },
+      }
+
+      // Calcular distancia
+      const dist = calculateDistance(start[1], start[0], end[1], end[0])
+      totalDist += dist
+
       // Añadir la fuente y la capa de la ruta
-      map.current.addSource("route", {
-        type: "geojson",
-        data: {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "LineString",
-            coordinates: coordinates,
+      try {
+        map.current.addSource(`route-${i + 1}`, {
+          type: "geojson",
+          data: geojson as any,
+        })
+
+        map.current.addLayer({
+          id: `route-${i + 1}`,
+          type: "line",
+          source: `route-${i + 1}`,
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
           },
-        },
-      })
-
-      map.current.addLayer({
-        id: "route",
-        type: "line",
-        source: "route",
-        layout: {
-          "line-join": "round",
-          "line-cap": "round",
-        },
-        paint: {
-          "line-color": "#F97316",
-          "line-width": 4,
-          "line-opacity": 0.8,
-        },
-      })
-
-      console.log("✅ Ruta añadida correctamente")
-    } catch (error) {
-      console.error("❌ Error al añadir capa de ruta:", error)
-      setDebugInfo((prev) => prev + "\nError al añadir capa: " + (error as Error).message)
+          paint: {
+            "line-color": "#F97316",
+            "line-width": 4,
+            "line-opacity": 0.8,
+          },
+        })
+      } catch (error) {
+        console.error(`Error al añadir ruta ${i + 1}:`, error)
+      }
     }
+
+    setTotalDistance(Math.round(totalDist))
+    console.log("✅ Rutas añadidas correctamente")
   }
 
   // Función para añadir marcadores
@@ -167,19 +215,45 @@ export default function TravelStampGenerator() {
     if (!map.current) return
 
     try {
-      // Limpiar marcadores existentes
+      // Limpiar marcadores y popups existentes
       markersRef.current.forEach((marker) => marker.remove())
+      popupsRef.current.forEach((popup) => popup.remove())
       markersRef.current = []
+      popupsRef.current = []
 
       // Añadir nuevos marcadores
-      locations.forEach((location) => {
+      locations.forEach((location, index) => {
         console.log("📍 Añadiendo marcador en", location.coordinates)
+
+        // Crear popup
+        const popup = new mapboxgl.Popup({
+          offset: 25,
+          closeButton: false,
+          closeOnClick: false,
+        })
+          .setHTML(`<div class="text-sm font-medium p-1">${location.name}</div>`)
+          .setLngLat(location.coordinates)
+
+        popupsRef.current.push(popup)
+
+        // Crear marcador
         const marker = new mapboxgl.Marker({
           color: "#F97316",
           draggable: false,
+          scale: 1,
         })
           .setLngLat(location.coordinates)
+          .setPopup(popup)
           .addTo(map.current!)
+
+        // Mostrar popup al pasar el ratón
+        marker.getElement().addEventListener("mouseenter", () => {
+          popup.addTo(map.current!)
+        })
+
+        marker.getElement().addEventListener("mouseleave", () => {
+          popup.remove()
+        })
 
         markersRef.current.push(marker)
       })
@@ -311,31 +385,25 @@ export default function TravelStampGenerator() {
         coordinates: [lng, lat] as [number, number],
       }
 
-      // Añadir marcador
-      if (map.current) {
-        const marker = new mapboxgl.Marker({ color: "#F97316" }).setLngLat(newLocation.coordinates).addTo(map.current)
-
-        markersRef.current.push(marker)
-        console.log("✅ Marcador añadido, total:", markersRef.current.length)
-      }
-
       // Actualizar estado
       const newLocations = [...locations, newLocation]
       setLocations(newLocations)
-      setTotalDistance(calculateTotalDistance(newLocations))
 
-      // Actualizar ruta si hay más de una ubicación
-      if (newLocations.length > 1) {
-        updateRoute()
-      }
-
-      // Centrar el mapa en la nueva ubicación
-      if (map.current) {
-        map.current.flyTo({
-          center: newLocation.coordinates,
-          zoom: 10,
-        })
-      }
+      // Añadir marcador y actualizar ruta
+      setTimeout(() => {
+        addMarkers()
+        if (newLocations.length > 1) {
+          updateRoute()
+        } else {
+          // Centrar el mapa en la nueva ubicación
+          if (map.current) {
+            map.current.flyTo({
+              center: newLocation.coordinates,
+              zoom: 10,
+            })
+          }
+        }
+      }, 100)
     } catch (error) {
       console.error("❌ Error al añadir ubicación:", error)
       setDebugInfo((prev) => prev + "\nError al añadir ubicación: " + (error as Error).message)
@@ -404,66 +472,64 @@ export default function TravelStampGenerator() {
       coordinates: result.center as [number, number],
     }
 
-    // Add marker
-    const marker = new mapboxgl.Marker({ color: "#F97316" }).setLngLat(newLocation.coordinates).addTo(map.current)
-    markersRef.current.push(marker)
-    console.log("✅ Marcador añadido, total:", markersRef.current.length)
-
     // Update locations
     const newLocations = [...locations, newLocation]
     setLocations(newLocations)
-    setTotalDistance(calculateTotalDistance(newLocations))
     setSearchResults([])
     setLocation("")
 
-    // Update route if there are multiple locations
-    if (newLocations.length > 1) {
-      updateRoute()
-    } else {
-      // Center map on single location
-      map.current.flyTo({
-        center: newLocation.coordinates,
-        zoom: 10,
-      })
-    }
+    // Añadir marcador y actualizar ruta
+    setTimeout(() => {
+      addMarkers()
+      if (newLocations.length > 1) {
+        updateRoute()
+      } else {
+        // Center map on single location
+        map.current!.flyTo({
+          center: newLocation.coordinates,
+          zoom: 10,
+        })
+      }
+    }, 100)
   }
 
   // Eliminar ubicación
   const removeLocation = (index: number) => {
     console.log("🗑️ Eliminando ubicación:", index)
 
-    if (markersRef.current[index]) {
-      markersRef.current[index].remove()
-      markersRef.current.splice(index, 1)
-    }
-
     const newLocations = [...locations]
     newLocations.splice(index, 1)
     setLocations(newLocations)
-    setTotalDistance(calculateTotalDistance(newLocations))
 
-    if (newLocations.length > 1 && map.current) {
-      updateRoute()
-    } else if (map.current) {
-      if (map.current.getLayer("route")) {
-        map.current.removeLayer("route")
-      }
-      if (map.current.getSource("route")) {
-        map.current.removeSource("route")
-      }
+    setTimeout(() => {
+      addMarkers()
 
-      if (newLocations.length === 1) {
-        map.current.flyTo({
-          center: newLocations[0].coordinates,
-          zoom: 10,
-        })
-      } else {
-        map.current.flyTo({
-          center: mapCenter,
-          zoom: zoom,
-        })
+      if (newLocations.length > 1) {
+        updateRoute()
+      } else if (map.current) {
+        // Eliminar todas las rutas
+        for (let i = 1; i <= locations.length; i++) {
+          if (map.current.getLayer(`route-${i}`)) {
+            map.current.removeLayer(`route-${i}`)
+          }
+          if (map.current.getSource(`route-${i}`)) {
+            map.current.removeSource(`route-${i}`)
+          }
+        }
+
+        if (newLocations.length === 1) {
+          map.current.flyTo({
+            center: newLocations[0].coordinates,
+            zoom: 10,
+          })
+        } else {
+          map.current.flyTo({
+            center: mapCenter,
+            zoom: zoom,
+          })
+        }
       }
-    }
+    }, 100)
   }
 
   // Generar estampita
@@ -488,7 +554,20 @@ export default function TravelStampGenerator() {
 
       // Usar la API estática de Mapbox para generar la imagen
       const [west, south, east, north] = bounds.toArray().flat()
-      const path = locations.map((loc) => loc.coordinates.join(",")).join(";")
+
+      // Construir el path para la API estática
+      let pathParam = ""
+
+      // Si hay más de un punto, crear una ruta
+      if (locations.length > 1) {
+        const path = locations.map((loc) => loc.coordinates.join(",")).join(";")
+        pathParam = `path-4+f97316-0.8(${path})/`
+      }
+
+      // Añadir marcadores para cada ubicación
+      const markers = locations
+        .map((loc, i) => `pin-l-${i + 1}+f97316(${loc.coordinates[0]},${loc.coordinates[1]})`)
+        .join(",")
 
       // Determinar dimensiones según formato
       let width = 1200
@@ -506,7 +585,7 @@ export default function TravelStampGenerator() {
       }
 
       // Construir la URL de la imagen estática
-      const staticMapUrl = `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/static/path-3+f97316(${path})/[${west},${south},${east},${north}]/${width}x${height}@2x?padding=50&access_token=${MAPBOX_TOKEN}`
+      const staticMapUrl = `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/static/${pathParam}${markers}/[${west},${south},${east},${north}]/${width}x${height}@2x?padding=50&access_token=${MAPBOX_TOKEN}`
       console.log("🔗 URL de mapa estático generada")
 
       // Crear un canvas para componer la imagen final
@@ -651,13 +730,19 @@ export default function TravelStampGenerator() {
     markersRef.current.forEach((marker) => marker.remove())
     markersRef.current = []
 
-    // Eliminar ruta si existe
+    // Limpiar popups
+    popupsRef.current.forEach((popup) => popup.remove())
+    popupsRef.current = []
+
+    // Eliminar rutas
     if (map.current) {
-      if (map.current.getLayer("route")) {
-        map.current.removeLayer("route")
-      }
-      if (map.current.getSource("route")) {
-        map.current.removeSource("route")
+      for (let i = 1; i <= locations.length; i++) {
+        if (map.current.getLayer(`route-${i}`)) {
+          map.current.removeLayer(`route-${i}`)
+        }
+        if (map.current.getSource(`route-${i}`)) {
+          map.current.removeSource(`route-${i}`)
+        }
       }
 
       // Reiniciar vista
@@ -775,6 +860,13 @@ export default function TravelStampGenerator() {
                   <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-amber-500" />
                   <p>Cargando mapa...</p>
                 </div>
+              </div>
+            )}
+
+            {isRouteFetching && (
+              <div className="absolute bottom-4 right-4 bg-white px-3 py-2 rounded-md shadow-md flex items-center">
+                <RefreshCw className="h-4 w-4 animate-spin mr-2 text-amber-500" />
+                <span className="text-sm">Trazando ruta...</span>
               </div>
             )}
 
@@ -997,6 +1089,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
