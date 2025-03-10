@@ -119,7 +119,8 @@ export default function AIIllustratedStamp({
 
   // Función para generar la estampita ilustrada
   const generateIllustration = async (retry = false) => {
-    if (destinations.length < 2) {
+    // Validar destinos solo cuando se intenta generar
+    if (!destinations || destinations.length < 2) {
       setError("Por favor, añade al menos dos destinos para generar una estampita.")
       return
     }
@@ -526,7 +527,7 @@ export default function AIIllustratedStamp({
           {!generatedImage ? (
             <Button
               onClick={() => generateIllustration(false)}
-              disabled={isGenerating || destinations.length < 2}
+              disabled={isGenerating}
               className="w-full bg-gradient-to-r from-amber-500 to-amber-700 hover:from-amber-600 hover:to-amber-800"
             >
               {isGenerating ? (
@@ -617,6 +618,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 
