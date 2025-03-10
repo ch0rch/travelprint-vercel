@@ -97,30 +97,33 @@ export default function TravelStampGenerator() {
           preserveDrawingBuffer: true,
         })
 
-        // Añadir controles de navegación
-        newMap.addControl(new mapboxgl.NavigationControl(), "top-right")
-
-        // Manejar eventos del mapa
+        // Wait for map to load before adding controls and event listeners
         newMap.on("load", () => {
           console.log("✅ Mapa cargado correctamente")
           setIsMapLoaded(true)
           setMapError(null)
           map.current = newMap
 
-          // Si hay ubicaciones, actualizar la ruta
-          if (locations.length > 1) {
-            updateRoute()
+          // Add navigation controls
+          newMap.addControl(new mapboxgl.NavigationControl(), "top-right")
+
+          // Add click handler for adding locations
+          newMap.on("click", (e) => {
+            addLocationByCoordinates(e.lngLat.lng, e.lngLat.lat)
+          })
+
+          // If there are existing locations, add them to the map
+          if (locations.length > 0) {
+            locations.forEach((location) => {
+              const marker = new mapboxgl.Marker({ color: "#F97316" }).setLngLat(location.coordinates).addTo(newMap)
+              markersRef.current.push(marker)
+            })
+
+            // If there are multiple locations, draw the route
+            if (locations.length > 1) {
+              updateRoute()
+            }
           }
-        })
-
-        newMap.on("error", (e) => {
-          console.error("❌ Error en el mapa:", e)
-          setMapError(`Error al cargar el mapa: ${e.error?.message || "Error desconocido"}`)
-        })
-
-        // Permitir añadir marcadores haciendo clic en el mapa
-        newMap.on("click", (e) => {
-          addLocationByCoordinates(e.lngLat.lng, e.lngLat.lat)
         })
 
         map.current = newMap
@@ -146,19 +149,19 @@ export default function TravelStampGenerator() {
     try {
       map.current.setStyle(`mapbox://styles/mapbox/${mapStyle}`)
 
-      // Volver a añadir la ruta y marcadores después de cambiar el estilo
+      // Re-add markers and route after style change
       map.current.once("style.load", () => {
-        // Limpiar marcadores existentes
+        // Clear existing markers
         markersRef.current.forEach((marker) => marker.remove())
         markersRef.current = []
 
-        // Volver a añadir los marcadores
+        // Re-add markers
         locations.forEach((location) => {
           const marker = new mapboxgl.Marker({ color: "#F97316" }).setLngLat(location.coordinates).addTo(map.current!)
           markersRef.current.push(marker)
         })
 
-        // Actualizar la ruta si hay más de una ubicación
+        // Re-add route if there are multiple locations
         if (locations.length > 1) {
           updateRoute()
         }
@@ -167,7 +170,7 @@ export default function TravelStampGenerator() {
       console.error("❌ Error al cambiar el estilo del mapa:", error)
       setMapError("Error al cambiar el estilo del mapa. Intenta recargar la página.")
     }
-  }, [mapStyle])
+  }, [mapStyle, locations])
 
   // Añadir ubicación por coordenadas (para clicks en el mapa)
   const addLocationByCoordinates = async (lng: number, lat: number) => {
@@ -239,14 +242,13 @@ export default function TravelStampGenerator() {
     return Math.round(total)
   }
 
-  // Actualizar la ruta en el mapa
   const updateRoute = () => {
     if (!map.current || locations.length < 2) return
 
     try {
       const coordinates = locations.map((loc) => loc.coordinates)
 
-      // Esperar a que el mapa esté listo
+      // Wait for style to load if needed
       if (!map.current.isStyleLoaded()) {
         map.current.once("style.load", () => {
           addRouteToMap(coordinates)
@@ -255,57 +257,61 @@ export default function TravelStampGenerator() {
       }
 
       addRouteToMap(coordinates)
+
+      // Fit map to show all markers
+      const bounds = new mapboxgl.LngLatBounds()
+      coordinates.forEach((coord) => bounds.extend(coord))
+      map.current.fitBounds(bounds, {
+        padding: { top: 50, bottom: 50, left: 50, right: 50 },
+        maxZoom: 15,
+      })
     } catch (error) {
       console.error("❌ Error al actualizar la ruta:", error)
     }
   }
 
-  // Función auxiliar para añadir la ruta al mapa
   const addRouteToMap = (coordinates: [number, number][]) => {
     if (!map.current) return
 
-    // Remover ruta existente si la hay
-    if (map.current.getLayer("route")) {
-      map.current.removeLayer("route")
-    }
-    if (map.current.getSource("route")) {
-      map.current.removeSource("route")
-    }
+    try {
+      // Remove existing route if it exists
+      if (map.current.getLayer("route")) {
+        map.current.removeLayer("route")
+      }
+      if (map.current.getSource("route")) {
+        map.current.removeSource("route")
+      }
 
-    // Añadir nueva ruta
-    map.current.addSource("route", {
-      type: "geojson",
-      data: {
-        type: "Feature",
-        properties: {},
-        geometry: {
-          type: "LineString",
-          coordinates: coordinates,
+      // Add the route source and layer
+      map.current.addSource("route", {
+        type: "geojson",
+        data: {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates: coordinates,
+          },
         },
-      },
-    })
+      })
 
-    map.current.addLayer({
-      id: "route",
-      type: "line",
-      source: "route",
-      layout: {
-        "line-join": "round",
-        "line-cap": "round",
-      },
-      paint: {
-        "line-color": "#F97316",
-        "line-width": 3,
-      },
-    })
-
-    // Ajustar la vista para mostrar toda la ruta
-    const bounds = new mapboxgl.LngLatBounds()
-    coordinates.forEach((coord) => bounds.extend(coord))
-    map.current.fitBounds(bounds, {
-      padding: { top: 50, bottom: 50, left: 50, right: 50 },
-      maxZoom: 15,
-    })
+      map.current.addLayer({
+        id: "route",
+        type: "line",
+        source: "route",
+        layout: {
+          "line-join": "round",
+          "line-cap": "round",
+        },
+        paint: {
+          "line-color": "#F97316",
+          "line-width": 3,
+          "line-opacity": 0.8,
+        },
+      })
+    } catch (error) {
+      console.error("❌ Error al añadir ruta al mapa:", error)
+    }
   }
 
   // Buscar ubicación
@@ -340,18 +346,22 @@ export default function TravelStampGenerator() {
       coordinates: result.center as [number, number],
     }
 
+    // Add marker
     const marker = new mapboxgl.Marker({ color: "#F97316" }).setLngLat(newLocation.coordinates).addTo(map.current)
     markersRef.current.push(marker)
 
+    // Update locations
     const newLocations = [...locations, newLocation]
     setLocations(newLocations)
     setTotalDistance(calculateTotalDistance(newLocations))
     setSearchResults([])
     setLocation("")
 
+    // Update route if there are multiple locations
     if (newLocations.length > 1) {
       updateRoute()
     } else {
+      // Center map on single location
       map.current.flyTo({
         center: newLocation.coordinates,
         zoom: 10,
@@ -874,6 +884,7 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
 
 
 
