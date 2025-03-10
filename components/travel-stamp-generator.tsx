@@ -87,22 +87,27 @@ export default function TravelStampGenerator() {
     if (!MAPBOX_TOKEN) return null
 
     try {
-      const response = await fetch(
-        `https://api.mapbox.com/directions/v5/mapbox/driving/${start[0]},${start[1]};${end[0]},${end[1]}?geometries=geojson&access_token=${MAPBOX_TOKEN}`,
-      )
+      console.log(`🧭 Obteniendo ruta entre [${start}] y [${end}]`)
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${start[0]},${start[1]};${end[0]},${end[1]}?steps=false&geometries=geojson&access_token=${MAPBOX_TOKEN}`
 
-      if (!response.ok) throw new Error("Error al obtener la ruta")
+      const response = await fetch(url)
+
+      if (!response.ok) {
+        console.warn(`⚠️ Error en API de rutas: ${response.status} ${response.statusText}`)
+        return null
+      }
 
       const data = await response.json()
 
       if (!data.routes || data.routes.length === 0) {
-        console.warn("No se encontró una ruta entre los puntos")
+        console.warn("⚠️ No se encontró una ruta entre los puntos")
         return null
       }
 
+      console.log(`✅ Ruta obtenida con ${data.routes[0].geometry.coordinates.length} puntos`)
       return data.routes[0].geometry
     } catch (error) {
-      console.error("Error al obtener la ruta:", error)
+      console.error("❌ Error al obtener la ruta:", error)
       setDebugInfo((prev) => prev + "\nError al obtener ruta: " + (error as Error).message)
       return null
     }
@@ -118,11 +123,14 @@ export default function TravelStampGenerator() {
 
       // Eliminar rutas existentes
       for (let i = 1; i <= locations.length; i++) {
-        if (map.current.getLayer(`route-${i}`)) {
-          map.current.removeLayer(`route-${i}`)
+        const layerId = `route-${i}`
+        const sourceId = `route-source-${i}`
+
+        if (map.current.getLayer(layerId)) {
+          map.current.removeLayer(layerId)
         }
-        if (map.current.getSource(`route-${i}`)) {
-          map.current.removeSource(`route-${i}`)
+        if (map.current.getSource(sourceId)) {
+          map.current.removeSource(sourceId)
         }
       }
 
@@ -139,12 +147,14 @@ export default function TravelStampGenerator() {
       await addRoutes()
 
       // Ajustar la vista para mostrar toda la ruta
-      const bounds = new mapboxgl.LngLatBounds()
-      locations.forEach((loc) => bounds.extend(loc.coordinates))
-      map.current.fitBounds(bounds, {
-        padding: { top: 50, bottom: 50, left: 50, right: 50 },
-        maxZoom: 15,
-      })
+      if (locations.length > 0) {
+        const bounds = new mapboxgl.LngLatBounds()
+        locations.forEach((loc) => bounds.extend(loc.coordinates))
+        map.current.fitBounds(bounds, {
+          padding: { top: 50, bottom: 50, left: 50, right: 50 },
+          maxZoom: 15,
+        })
+      }
     } catch (error) {
       console.error("❌ Error al actualizar la ruta:", error)
       setDebugInfo((prev) => prev + "\nError al actualizar ruta: " + (error as Error).message)
@@ -159,38 +169,46 @@ export default function TravelStampGenerator() {
 
     let totalDist = 0
 
+    // Para cada par de puntos consecutivos
     for (let i = 0; i < locations.length - 1; i++) {
       const start = locations[i].coordinates
       const end = locations[i + 1].coordinates
+      const sourceId = `route-source-${i + 1}`
+      const layerId = `route-${i + 1}`
 
-      // Intentar obtener la ruta real entre los puntos
-      const routeGeometry = await getRoute(start, end)
+      console.log(`🛣️ Creando ruta ${i + 1} entre [${start}] y [${end}]`)
 
-      // Si no se pudo obtener la ruta, usar una línea recta
-      const geojson = {
-        type: "Feature",
-        properties: {},
-        geometry: routeGeometry || {
-          type: "LineString",
-          coordinates: [start, end],
-        },
-      }
-
-      // Calcular distancia
-      const dist = calculateDistance(start[1], start[0], end[1], end[0])
-      totalDist += dist
-
-      // Añadir la fuente y la capa de la ruta
       try {
-        map.current.addSource(`route-${i + 1}`, {
+        // Intentar obtener la ruta real entre los puntos con la API de Directions
+        let routeGeometry = await getRoute(start, end)
+
+        if (!routeGeometry) {
+          console.log(`⚠️ No se pudo obtener ruta para segmento ${i + 1}, usando línea recta`)
+          routeGeometry = {
+            type: "LineString",
+            coordinates: [start, end],
+          }
+        }
+
+        // Calcular distancia
+        const dist = calculateDistance(start[1], start[0], end[1], end[0])
+        totalDist += dist
+
+        // Añadir la fuente de la ruta
+        map.current.addSource(sourceId, {
           type: "geojson",
-          data: geojson as any,
+          data: {
+            type: "Feature",
+            properties: {},
+            geometry: routeGeometry,
+          },
         })
 
+        // Añadir la capa de la ruta
         map.current.addLayer({
-          id: `route-${i + 1}`,
+          id: layerId,
           type: "line",
-          source: `route-${i + 1}`,
+          source: sourceId,
           layout: {
             "line-join": "round",
             "line-cap": "round",
@@ -201,13 +219,16 @@ export default function TravelStampGenerator() {
             "line-opacity": 0.8,
           },
         })
+
+        console.log(`✅ Ruta ${i + 1} añadida correctamente`)
       } catch (error) {
-        console.error(`Error al añadir ruta ${i + 1}:`, error)
+        console.error(`❌ Error al añadir ruta ${i + 1}:`, error)
+        setDebugInfo((prev) => prev + `\nError en ruta ${i + 1}: ` + (error as Error).message)
       }
     }
 
     setTotalDistance(Math.round(totalDist))
-    console.log("✅ Rutas añadidas correctamente")
+    console.log(`✅ Total ${locations.length - 1} rutas añadidas. Distancia: ${Math.round(totalDist)} km`)
   }
 
   // Función para añadir marcadores
@@ -215,6 +236,8 @@ export default function TravelStampGenerator() {
     if (!map.current) return
 
     try {
+      console.log("📍 Añadiendo marcadores para", locations.length, "ubicaciones")
+
       // Limpiar marcadores y popups existentes
       markersRef.current.forEach((marker) => marker.remove())
       popupsRef.current.forEach((popup) => popup.remove())
@@ -223,7 +246,27 @@ export default function TravelStampGenerator() {
 
       // Añadir nuevos marcadores
       locations.forEach((location, index) => {
-        console.log("📍 Añadiendo marcador en", location.coordinates)
+        console.log(`📍 Añadiendo marcador #${index + 1} en [${location.coordinates}]`)
+
+        // Crear elemento personalizado para el marcador con número
+        const el = document.createElement("div")
+        const size = 35
+
+        el.className = "marker"
+        el.style.backgroundColor = "#F97316"
+        el.style.width = `${size}px`
+        el.style.height = `${size}px`
+        el.style.borderRadius = "50%"
+        el.style.display = "flex"
+        el.style.alignItems = "center"
+        el.style.justifyContent = "center"
+        el.style.color = "#FFF"
+        el.style.fontWeight = "bold"
+        el.style.fontSize = "14px"
+        el.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.3)"
+        el.style.cursor = "pointer"
+        el.style.border = "2px solid white"
+        el.innerHTML = `${index + 1}`
 
         // Crear popup
         const popup = new mapboxgl.Popup({
@@ -231,27 +274,26 @@ export default function TravelStampGenerator() {
           closeButton: false,
           closeOnClick: false,
         })
-          .setHTML(`<div class="text-sm font-medium p-1">${location.name}</div>`)
+          .setHTML(`<div class="p-2 text-sm font-medium">${location.name}</div>`)
           .setLngLat(location.coordinates)
 
         popupsRef.current.push(popup)
 
-        // Crear marcador
+        // Crear marcador con el elemento personalizado
         const marker = new mapboxgl.Marker({
-          color: "#F97316",
+          element: el,
           draggable: false,
-          scale: 1,
         })
           .setLngLat(location.coordinates)
           .setPopup(popup)
           .addTo(map.current!)
 
         // Mostrar popup al pasar el ratón
-        marker.getElement().addEventListener("mouseenter", () => {
+        el.addEventListener("mouseenter", () => {
           popup.addTo(map.current!)
         })
 
-        marker.getElement().addEventListener("mouseleave", () => {
+        el.addEventListener("mouseleave", () => {
           popup.remove()
         })
 
@@ -283,6 +325,22 @@ export default function TravelStampGenerator() {
           zoom: zoom,
           attributionControl: true,
           preserveDrawingBuffer: true,
+        })
+
+        // Add this in the useEffect for map initialization, right after creating the map instance:
+
+        map.current = newMap
+
+        // Add this event for debugging map load issues
+        newMap.on("styledata", () => {
+          console.log("🎨 Estilo de mapa cargado:", newMap.isStyleLoaded())
+        })
+
+        // Add a better error handler for the map load
+        newMap.on("error", (e) => {
+          console.error("❌ Error en el mapa:", e)
+          setMapError(`Error al cargar el mapa: ${e.error?.message || "Error desconocido"}`)
+          setDebugInfo((prev) => prev + "\nError del mapa: " + (e.error?.message || JSON.stringify(e)))
         })
 
         // Manejar eventos del mapa
@@ -584,9 +642,46 @@ export default function TravelStampGenerator() {
         height = 1920
       }
 
-      // Construir la URL de la imagen estática
-      const staticMapUrl = `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/static/${pathParam}${markers}/[${west},${south},${east},${north}]/${width}x${height}@2x?padding=50&access_token=${MAPBOX_TOKEN}`
-      console.log("🔗 URL de mapa estático generada")
+      // Construir la URL de la imagen estática correctamente
+      let staticMapUrl = ""
+
+      try {
+        // Crear la parte de coordenadas para el centro/zoom o para los límites
+        let bbox = ""
+
+        // Si tenemos ubicaciones, usamos límites
+        if (locations.length > 0) {
+          const bounds = new mapboxgl.LngLatBounds()
+          locations.forEach((loc) => bounds.extend(loc.coordinates))
+          const [west, south, east, north] = bounds.toArray().flat()
+          bbox = `${west},${south},${east},${north}`
+        } else {
+          // Si no hay ubicaciones, usamos el centro por defecto
+          bbox = `${mapCenter[0]},${mapCenter[1]},${mapCenter[0]},${mapCenter[1]}`
+        }
+
+        // Construir marcadores para cada ubicación
+        const markers = locations
+          .map((loc, i) => `pin-l-${i + 1}+f97316(${loc.coordinates[0]},${loc.coordinates[1]})`)
+          .join(",")
+
+        // Construir la ruta si hay más de una ubicación
+        let pathPart = ""
+        if (locations.length > 1) {
+          const coordinates = locations.map((loc) => `${loc.coordinates[0]},${loc.coordinates[1]}`).join(";")
+          pathPart = `path-4+f97316-0.8(${coordinates})/`
+        }
+
+        // Construir la URL final
+        // Formato: mapbox://styles/mapbox/{style}/static/{overlay features}/{lon,lat,zoom}/{width}x{height}{@2x}
+        staticMapUrl = `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/static/${pathPart}${markers}/[${bbox}]/${width}x${height}@2x?padding=50&access_token=${MAPBOX_TOKEN}`
+
+        console.log("🔗 URL de mapa estático generada:", staticMapUrl)
+      } catch (error) {
+        console.error("Error al generar URL de mapa estático:", error)
+        setDebugInfo((prev) => prev + "\nError en URL de mapa: " + (error as Error).message)
+        throw new Error("Error al generar la URL del mapa estático")
+      }
 
       // Crear un canvas para componer la imagen final
       const canvas = document.createElement("canvas")
@@ -1089,6 +1184,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
