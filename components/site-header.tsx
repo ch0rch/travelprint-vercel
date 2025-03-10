@@ -1,6 +1,6 @@
 "use client"
 
-import { Crown, Menu } from "lucide-react"
+import { Crown, Menu, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { isPremiumUser } from "@/utils/premium-storage"
 import { useState, useEffect } from "react"
@@ -51,6 +51,10 @@ export function SiteHeader() {
 
         {/* Navegación para escritorio */}
         <nav className="hidden md:flex items-center gap-2">
+          <Link href="/ia" className="text-amber-800 hover:text-amber-600 text-sm mr-2 font-medium">
+            <Sparkles className="h-3 w-3 inline mr-1" />
+            Estampitas IA
+          </Link>
           <Link href="/carta-del-creador" className="text-amber-800 hover:text-amber-600 text-sm mr-2">
             Nuestra historia
           </Link>
@@ -85,6 +89,13 @@ export function SiteHeader() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[250px] sm:w-[300px]">
               <div className="flex flex-col gap-4 py-4">
+                <Link
+                  href="/ia"
+                  className="text-amber-800 hover:text-amber-600 text-sm font-medium px-2 py-2 rounded-md hover:bg-amber-50 flex items-center"
+                >
+                  <Sparkles className="h-4 w-4 mr-2 text-amber-500" />
+                  Estampitas IA
+                </Link>
                 <Link
                   href="/carta-del-creador"
                   className="text-amber-800 hover:text-amber-600 text-sm font-medium px-2 py-2 rounded-md hover:bg-amber-50"
@@ -142,6 +153,8 @@ export function SiteHeader() {
     </header>
   )
 }
+
+
 
 
 
