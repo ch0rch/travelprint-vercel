@@ -8,11 +8,9 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Crown, Download, MapPin, RefreshCw, Plus, X, Search, Share2 } from "lucide-react"
+import { Download, MapPin, RefreshCw, Plus, X, Search, Share2 } from "lucide-react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
-import { isPremiumUser } from "@/utils/premium-storage"
-import { getRemainingDays } from "@/utils/premium-storage"
 
 // Mapbox token - IMPORTANT: Must be configured in your .env.local file
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -33,20 +31,20 @@ interface Location {
 
 // Estilos de mapa disponibles
 const mapStyles = [
-  { id: "streets-v12", name: "Aventura", premium: false },
-  { id: "outdoors-v12", name: "Naturaleza", premium: false },
-  { id: "satellite-v9", name: "Satélite", premium: true },
-  { id: "navigation-night-v1", name: "Nocturno", premium: true },
-  { id: "light-v11", name: "Claro", premium: false },
-  { id: "dark-v11", name: "Oscuro", premium: true },
+  { id: "streets-v12", name: "Aventura" },
+  { id: "outdoors-v12", name: "Naturaleza" },
+  { id: "satellite-v9", name: "Satélite" },
+  { id: "navigation-night-v1", name: "Nocturno" },
+  { id: "light-v11", name: "Claro" },
+  { id: "dark-v11", name: "Oscuro" },
 ]
 
 // Formatos disponibles
 const stampFormats = [
-  { id: "landscape", name: "Horizontal", premium: false },
-  { id: "portrait", name: "Vertical", premium: true },
-  { id: "square", name: "Cuadrado", premium: true },
-  { id: "story", name: "Historia", premium: true },
+  { id: "landscape", name: "Horizontal" },
+  { id: "portrait", name: "Vertical" },
+  { id: "square", name: "Cuadrado" },
+  { id: "story", name: "Historia" },
 ]
 
 export default function TravelStampGenerator() {
@@ -64,8 +62,6 @@ export default function TravelStampGenerator() {
   const [isSearching, setIsSearching] = useState(false)
   const [mapCenter] = useState<[number, number]>([-70.6483, -33.4569])
   const [isMapLoaded, setIsMapLoaded] = useState(false)
-  const [isPremium, setIsPremium] = useState(false)
-  const [remainingDays, setRemainingDays] = useState(0)
   const [totalDistance, setTotalDistance] = useState(0)
   const [stampFormat, setStampFormat] = useState("landscape")
   const [tripTitle, setTripTitle] = useState("")
@@ -75,12 +71,6 @@ export default function TravelStampGenerator() {
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [debugInfo, setDebugInfo] = useState<string>("")
   const [isRouteFetching, setIsRouteFetching] = useState(false)
-
-  // Verificar estado premium
-  useEffect(() => {
-    setIsPremium(isPremiumUser())
-    setRemainingDays(getRemainingDays())
-  }, [])
 
   // Función para obtener la ruta entre dos puntos usando la API de Mapbox Directions
   const getRoute = async (start: [number, number], end: [number, number]) => {
@@ -327,8 +317,6 @@ export default function TravelStampGenerator() {
           preserveDrawingBuffer: true,
         })
 
-        // Add this in the useEffect for map initialization, right after creating the map instance:
-
         map.current = newMap
 
         // Add this event for debugging map load issues
@@ -570,8 +558,8 @@ export default function TravelStampGenerator() {
           if (map.current.getLayer(`route-${i}`)) {
             map.current.removeLayer(`route-${i}`)
           }
-          if (map.current.getSource(`route-${i}`)) {
-            map.current.removeSource(`route-${i}`)
+          if (map.current.getSource(`route-source-${i}`)) {
+            map.current.removeSource(`route-source-${i}`)
           }
         }
 
@@ -610,23 +598,6 @@ export default function TravelStampGenerator() {
       // Esperar a que el mapa se renderice completamente
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      // Usar la API estática de Mapbox para generar la imagen
-      const [west, south, east, north] = bounds.toArray().flat()
-
-      // Construir el path para la API estática
-      let pathParam = ""
-
-      // Si hay más de un punto, crear una ruta
-      if (locations.length > 1) {
-        const path = locations.map((loc) => loc.coordinates.join(",")).join(";")
-        pathParam = `path-4+f97316-0.8(${path})/`
-      }
-
-      // Añadir marcadores para cada ubicación
-      const markers = locations
-        .map((loc, i) => `pin-l-${i + 1}+f97316(${loc.coordinates[0]},${loc.coordinates[1]})`)
-        .join(",")
-
       // Determinar dimensiones según formato
       let width = 1200
       let height = 900
@@ -643,138 +614,113 @@ export default function TravelStampGenerator() {
       }
 
       // Construir la URL de la imagen estática correctamente
-      let staticMapUrl = ""
+      const staticMapUrl = ""
 
       try {
-        // Crear la parte de coordenadas para el centro/zoom o para los límites
-        let bbox = ""
+        // Método alternativo: usar captura del canvas del mapa
+        const canvas = map.current.getCanvas()
+        const dataUrl = canvas.toDataURL("image/png")
 
-        // Si tenemos ubicaciones, usamos límites
-        if (locations.length > 0) {
-          const bounds = new mapboxgl.LngLatBounds()
-          locations.forEach((loc) => bounds.extend(loc.coordinates))
-          const [west, south, east, north] = bounds.toArray().flat()
-          bbox = `${west},${south},${east},${north}`
-        } else {
-          // Si no hay ubicaciones, usamos el centro por defecto
-          bbox = `${mapCenter[0]},${mapCenter[1]},${mapCenter[0]},${mapCenter[1]}`
+        console.log("✅ Imagen capturada del mapa")
+
+        // Crear un canvas para componer la imagen final
+        const finalCanvas = document.createElement("canvas")
+        const ctx = finalCanvas.getContext("2d")
+
+        if (!ctx) throw new Error("No se pudo obtener el contexto del canvas")
+
+        finalCanvas.width = width
+        finalCanvas.height = height
+
+        // Crear una imagen a partir del mapa capturado
+        const mapImage = new Image()
+        mapImage.crossOrigin = "anonymous"
+
+        await new Promise((resolve, reject) => {
+          mapImage.onload = resolve
+          mapImage.onerror = reject
+          mapImage.src = dataUrl
+        })
+
+        // Dibujar el mapa
+        ctx.drawImage(mapImage, 0, 0, width, height)
+
+        // Añadir elementos de texto
+        ctx.textAlign = "center"
+        ctx.fillStyle = "white"
+        ctx.shadowColor = "rgba(0, 0, 0, 0.5)"
+        ctx.shadowBlur = 10
+        ctx.shadowOffsetX = 2
+        ctx.shadowOffsetY = 2
+
+        // Título
+        ctx.font = "bold 80px serif"
+        ctx.fillText(tripTitle || "Mi Viaje", width / 2, 120)
+
+        // Fecha
+        ctx.font = "40px serif"
+        ctx.fillText(tripDate || "2025", width / 2, 180)
+
+        // Sección inferior
+        const footerHeight = 200
+        ctx.shadowBlur = 0
+        ctx.shadowOffsetX = 0
+        ctx.shadowOffsetY = 0
+
+        ctx.fillStyle = "rgba(255, 251, 235, 0.9)"
+        ctx.fillRect(0, height - footerHeight, width, footerHeight)
+
+        // Distancia
+        ctx.fillStyle = "#92400E"
+        ctx.font = "bold 32px sans-serif"
+        ctx.fillText(`${totalDistance} km recorridos`, width / 2, height - footerHeight + 50)
+
+        // Comentario
+        if (tripComment) {
+          ctx.font = "italic 28px serif"
+          ctx.fillStyle = "#78350F"
+          ctx.fillText(`"${tripComment}"`, width / 2, height - footerHeight + 100)
         }
 
-        // Construir marcadores para cada ubicación
-        const markers = locations
-          .map((loc, i) => `pin-l-${i + 1}+f97316(${loc.coordinates[0]},${loc.coordinates[1]})`)
-          .join(",")
+        // Footer
+        ctx.font = "16px sans-serif"
+        ctx.fillStyle = "#B45309"
+        ctx.textAlign = "left"
+        ctx.fillText("travelprint.me", 40, height - 30)
+        ctx.textAlign = "right"
+        ctx.fillText("Mi recuerdo de viaje", width - 40, height - 30)
 
-        // Construir la ruta si hay más de una ubicación
-        let pathPart = ""
-        if (locations.length > 1) {
-          const coordinates = locations.map((loc) => `${loc.coordinates[0]},${loc.coordinates[1]}`).join(";")
-          pathPart = `path-4+f97316-0.8(${coordinates})/`
+        // Convertir a URL de datos
+        const finalDataUrl = finalCanvas.toDataURL("image/png")
+        console.log("✅ Imagen final generada correctamente")
+
+        // Subir a Cloudinary
+        console.log("☁️ Subiendo a Cloudinary...")
+        const response = await fetch("/api/upload-to-cloudinary", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            imageUrl: finalDataUrl,
+            title: tripTitle || "Mi Viaje",
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Error al subir la imagen a Cloudinary")
         }
 
-        // Construir la URL final
-        // Formato: mapbox://styles/mapbox/{style}/static/{overlay features}/{lon,lat,zoom}/{width}x{height}{@2x}
-        staticMapUrl = `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/static/${pathPart}${markers}/[${bbox}]/${width}x${height}@2x?padding=50&access_token=${MAPBOX_TOKEN}`
+        const { url: cloudinaryUrl } = await response.json()
+        console.log("✅ Imagen subida a Cloudinary")
 
-        console.log("🔗 URL de mapa estático generada:", staticMapUrl)
+        setGeneratedMap(cloudinaryUrl || finalDataUrl)
+        setShareUrl(cloudinaryUrl)
       } catch (error) {
         console.error("Error al generar URL de mapa estático:", error)
         setDebugInfo((prev) => prev + "\nError en URL de mapa: " + (error as Error).message)
-        throw new Error("Error al generar la URL del mapa estático")
+        throw new Error("Error al generar la imagen del mapa")
       }
-
-      // Crear un canvas para componer la imagen final
-      const canvas = document.createElement("canvas")
-      const ctx = canvas.getContext("2d")
-      if (!ctx) throw new Error("No se pudo obtener el contexto del canvas")
-
-      canvas.width = width
-      canvas.height = height
-
-      // Cargar y dibujar el mapa
-      const mapImage = new Image()
-      mapImage.crossOrigin = "anonymous"
-
-      await new Promise((resolve, reject) => {
-        mapImage.onload = resolve
-        mapImage.onerror = reject
-        mapImage.src = staticMapUrl
-      })
-
-      // Dibujar el mapa
-      ctx.drawImage(mapImage, 0, 0, width, height)
-
-      // Añadir elementos de texto
-      ctx.textAlign = "center"
-      ctx.fillStyle = "white"
-      ctx.shadowColor = "rgba(0, 0, 0, 0.5)"
-      ctx.shadowBlur = 10
-      ctx.shadowOffsetX = 2
-      ctx.shadowOffsetY = 2
-
-      // Título
-      ctx.font = "bold 80px serif"
-      ctx.fillText(tripTitle || "Mi Viaje", width / 2, 120)
-
-      // Fecha
-      ctx.font = "40px serif"
-      ctx.fillText(tripDate || "2025", width / 2, 180)
-
-      // Sección inferior
-      const footerHeight = 200
-      ctx.shadowBlur = 0
-      ctx.shadowOffsetX = 0
-      ctx.shadowOffsetY = 0
-
-      ctx.fillStyle = "rgba(255, 251, 235, 0.9)"
-      ctx.fillRect(0, height - footerHeight, width, footerHeight)
-
-      // Distancia
-      ctx.fillStyle = "#92400E"
-      ctx.font = "bold 32px sans-serif"
-      ctx.fillText(`${totalDistance} km recorridos`, width / 2, height - footerHeight + 50)
-
-      // Comentario
-      if (tripComment) {
-        ctx.font = "italic 28px serif"
-        ctx.fillStyle = "#78350F"
-        ctx.fillText(`"${tripComment}"`, width / 2, height - footerHeight + 100)
-      }
-
-      // Footer
-      ctx.font = "16px sans-serif"
-      ctx.fillStyle = "#B45309"
-      ctx.textAlign = "left"
-      ctx.fillText("travelprint.me", 40, height - 30)
-      ctx.textAlign = "right"
-      ctx.fillText("Mi recuerdo de viaje", width - 40, height - 30)
-
-      // Convertir a URL de datos
-      const dataUrl = canvas.toDataURL("image/png")
-      console.log("✅ Imagen generada correctamente")
-
-      // Subir a Cloudinary
-      console.log("☁️ Subiendo a Cloudinary...")
-      const response = await fetch("/api/upload-to-cloudinary", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          imageUrl: dataUrl,
-          title: tripTitle || "Mi Viaje",
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Error al subir la imagen a Cloudinary")
-      }
-
-      const { url: cloudinaryUrl } = await response.json()
-      console.log("✅ Imagen subida a Cloudinary")
-
-      setGeneratedMap(cloudinaryUrl || dataUrl)
-      setShareUrl(cloudinaryUrl)
     } catch (error) {
       console.error("❌ Error al generar la estampita:", error)
       setMapError("Error al generar la estampita. Intenta de nuevo.")
@@ -835,8 +781,8 @@ export default function TravelStampGenerator() {
         if (map.current.getLayer(`route-${i}`)) {
           map.current.removeLayer(`route-${i}`)
         }
-        if (map.current.getSource(`route-${i}`)) {
-          map.current.removeSource(`route-${i}`)
+        if (map.current.getSource(`route-source-${i}`)) {
+          map.current.removeSource(`route-source-${i}`)
         }
       }
 
@@ -884,7 +830,7 @@ export default function TravelStampGenerator() {
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              También puedes hacer clic en el mapa para añadir destinos de forma precisa
+              Haz clic directamente en el mapa para añadir destinos de forma precisa
             </p>
           </div>
 
@@ -990,11 +936,8 @@ export default function TravelStampGenerator() {
                   </SelectTrigger>
                   <SelectContent>
                     {mapStyles.map((style) => (
-                      <SelectItem key={style.id} value={style.id} disabled={style.premium && !isPremium}>
-                        <div className="flex items-center justify-between w-full">
-                          <span>{style.name}</span>
-                          {style.premium && <Crown className="h-4 w-4 text-amber-500 ml-2" />}
-                        </div>
+                      <SelectItem key={style.id} value={style.id}>
+                        <span>{style.name}</span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1044,17 +987,11 @@ export default function TravelStampGenerator() {
                     <div
                       key={format.id}
                       className={`border rounded-lg p-3 cursor-pointer transition-all hover:bg-muted
-                        ${stampFormat === format.id ? "bg-muted ring-2 ring-amber-500" : ""}
-                        ${format.premium && !isPremium ? "opacity-50" : ""}`}
-                      onClick={() => {
-                        if (!format.premium || isPremium) {
-                          setStampFormat(format.id)
-                        }
-                      }}
+                        ${stampFormat === format.id ? "bg-muted ring-2 ring-amber-500" : ""}`}
+                      onClick={() => setStampFormat(format.id)}
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-medium">{format.name}</span>
-                        {format.premium && <Crown className="h-4 w-4 text-amber-500" />}
                       </div>
                     </div>
                   ))}
@@ -1069,19 +1006,6 @@ export default function TravelStampGenerator() {
       <Card className="p-6 space-y-6">
         <div>
           <h3 className="text-lg font-semibold mb-2">Vista Previa</h3>
-
-          {/* Badge Premium */}
-          {isPremium && (
-            <div className="flex items-center gap-2 mb-4">
-              <div className="bg-amber-50 text-amber-700 px-2 py-1 rounded-md text-sm font-medium border border-amber-200 flex items-center gap-1">
-                <Crown className="h-4 w-4 text-amber-500" />
-                Premium
-              </div>
-              <span className="text-sm text-muted-foreground">
-                Tu suscripción premium expira el {new Date().toLocaleDateString()} ({remainingDays} días restantes)
-              </span>
-            </div>
-          )}
 
           {/* Vista previa del mapa */}
           <div className="aspect-[4/3] rounded-lg overflow-hidden bg-muted mb-4 flex items-center justify-center">
@@ -1144,46 +1068,12 @@ export default function TravelStampGenerator() {
             )}
           </div>
         </div>
-
-        {/* Características Premium */}
-        {!isPremium && (
-          <div className="space-y-4">
-            <h4 className="font-medium flex items-center gap-2">
-              <Crown className="h-4 w-4 text-amber-500" />
-              Características Premium
-            </h4>
-            <ul className="space-y-2 text-sm">
-              <li className="flex items-center gap-2">
-                <span className="text-amber-500">✓</span>
-                Formatos adicionales (vertical, horizontal, historia)
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-amber-500">✓</span>
-                Estilos de mapa premium (satélite, nocturno)
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-amber-500">✓</span>
-                Comentarios personalizados
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-amber-500">✓</span>
-                Descarga sin marca de agua
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-amber-500">✓</span>
-                Alta resolución (4x)
-              </li>
-            </ul>
-            <Button className="w-full bg-gradient-to-r from-amber-500 to-amber-700">
-              <Crown className="h-4 w-4 mr-2" />
-              Renovar premium ($5)
-            </Button>
-          </div>
-        )}
       </Card>
     </div>
   )
 }
+
+
 
 
 
