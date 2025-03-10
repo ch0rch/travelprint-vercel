@@ -27,6 +27,35 @@ export function isPremiumUser(): boolean {
   }
 }
 
+// Función para obtener los días restantes de la suscripción premium
+export function getRemainingDays(): number {
+  if (typeof window === "undefined") return 0
+
+  try {
+    // Verificar si hay una fecha de expiración almacenada
+    const expiryDateStr = localStorage.getItem(EXPIRY_DATE_KEY)
+    if (!expiryDateStr) return 0
+
+    // Convertir la fecha de expiración a número
+    const expiryDate = Number.parseInt(expiryDateStr, 10)
+
+    // Calcular los días restantes
+    const now = Date.now()
+    const remainingMs = expiryDate - now
+
+    // Si ya expiró, devolver 0
+    if (remainingMs <= 0) return 0
+
+    // Convertir de milisegundos a días y redondear hacia abajo
+    const remainingDays = Math.floor(remainingMs / (1000 * 60 * 60 * 24))
+
+    return remainingDays
+  } catch (error) {
+    console.error("Error al calcular días restantes:", error)
+    return 0
+  }
+}
+
 // Función para guardar el estado premium
 export async function verifyAndSavePremiumStatus(licenseKey: string): Promise<boolean> {
   if (typeof window === "undefined") return false
@@ -76,6 +105,8 @@ export function clearPremiumStatus(): void {
     console.error("Error al limpiar estado premium:", error)
   }
 }
+
+
 
 
 

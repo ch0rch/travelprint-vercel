@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Crown, Download, RefreshCw, Sparkles, ImageIcon, AlertCircle, Clock } from "lucide-react"
 import { isPremiumUser } from "@/utils/premium-storage"
-import OpenAIDiagnostics from "./openai-diagnostics"
 import { getCurrentCredits, useCredits } from "@/utils/credits-storage"
 
 interface AIIllustratedStampProps {
@@ -94,7 +93,7 @@ export default function AIIllustratedStamp({
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isTimeoutError, setIsTimeoutError] = useState(false)
-  const [isPremium, setIsPremium] = useState(isPremiumUser())
+  const [isPremium, setIsPremium] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
   const [showDiagnostics, setShowDiagnostics] = useState(false)
   const [imageId, setImageId] = useState<string | null>(null)
@@ -510,25 +509,6 @@ export default function AIIllustratedStamp({
           </div>
         )}
 
-        {error && (
-          <div className="mt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDiagnostics(!showDiagnostics)}
-              className="w-full text-xs"
-            >
-              {showDiagnostics ? "Ocultar diagnóstico" : "Mostrar diagnóstico técnico"}
-            </Button>
-
-            {showDiagnostics && (
-              <div className="mt-2">
-                <OpenAIDiagnostics />
-              </div>
-            )}
-          </div>
-        )}
-
         {isTimeoutError && generatedImage && (
           <div className="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200 flex items-start">
             <Clock className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
@@ -637,6 +617,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 
