@@ -4,7 +4,6 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { verifyAndSavePremiumStatus } from "@/utils/premium-storage"
 import { updateCreditsFromLicense } from "@/utils/credits-storage"
 
 interface ActivatePremiumModalProps {
@@ -27,6 +26,7 @@ export default function ActivatePremiumModal({ onClose }: ActivatePremiumModalPr
     setError(null)
 
     try {
+      // Verificar la licencia directamente con el servidor
       const response = await fetch("/api/verify-purchase", {
         method: "POST",
         headers: {
@@ -47,8 +47,11 @@ export default function ActivatePremiumModal({ onClose }: ActivatePremiumModalPr
       const data = await response.json()
 
       if (data.success) {
-        // Guardar estado premium
-        const result = await verifyAndSavePremiumStatus(licenseKey.trim())
+        console.log("Licencia verificada correctamente:", data)
+
+        // Guardar la licencia y la fecha de expiración
+        localStorage.setItem("premium_license", licenseKey.trim())
+        localStorage.setItem("premium_expiry", data.expiryDate.toString())
 
         // Actualizar créditos
         if (data.credits) {
@@ -63,8 +66,8 @@ export default function ActivatePremiumModal({ onClose }: ActivatePremiumModalPr
         setError("No pudimos verificar tu licencia. Por favor verifica la clave e intenta nuevamente.")
       }
     } catch (err) {
-      setError("Ocurrió un error al verificar tu licencia. Por favor intenta nuevamente.")
       console.error("Error activating premium:", err)
+      setError("Ocurrió un error al verificar tu licencia. Por favor intenta nuevamente.")
     } finally {
       setIsVerifying(false)
     }
@@ -134,6 +137,7 @@ export default function ActivatePremiumModal({ onClose }: ActivatePremiumModalPr
     </Dialog>
   )
 }
+
 
 
 
