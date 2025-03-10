@@ -7,11 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { MapPin, Download, X, Plus, Search, Square, Maximize, AlignJustify } from "lucide-react"
-import { checkPurchaseFromURL } from "@/utils/lemonsqueezy-utils"
-import { verifyAndSavePremiumStatus, isPremiumUser } from "@/utils/premium-storage"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
-import html2canvas from "html2canvas"
 
 // Mapbox token
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -26,43 +23,30 @@ interface Location {
   coordinates: [number, number]
 }
 
-// Formatos disponibles
 type StampFormat = "square" | "rectangle" | "story"
 
 export default function TravelStampGenerator() {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const [mapStyle, setMapStyle] = useState("mapbox://styles/mapbox/satellite-v9")
   const [zoom, setZoom] = useState(4)
   const [location, setLocation] = useState("")
   const [locations, setLocations] = useState<Location[]>([])
   const [generatedMap, setGeneratedMap] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [isPremium, setIsPremium] = useState(false)
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [tripTitle, setTripTitle] = useState("")
   const [tripDate, setTripDate] = useState("")
   const [tripComment, setTripComment] = useState("")
   const [totalDistance, setTotalDistance] = useState(0)
-  const [mapCenter, setMapCenter] = useState<[number, number]>([-70.6483, -33.4569]) // Santiago
-  const [mapBounds, setMapBounds] = useState<mapboxgl.LngLatBounds | null>(null)
+  const [mapCenter, setMapCenter] = useState<[number, number]>([-70.6483, -33.4569])
   const [stampFormat, setStampFormat] = useState<StampFormat>("rectangle")
-  const stampRef = useRef<HTMLDivElement>(null)
-  const [markerColor, setMarkerColor] = useState("#F97316") // Color naranja para los marcadores
-  const [routeColor, setRouteColor] = useState("#F97316") // Color naranja para la ruta
+  const [markerColor] = useState("#F97316")
+  const [routeColor] = useState("#F97316")
   const [isMapLoaded, setIsMapLoaded] = useState(false)
-
-  // Verificar licencia en la URL
-  useEffect(() => {
-    const result = checkPurchaseFromURL()
-    if (result.isValid && result.licenseKey) {
-      verifyAndSavePremiumStatus(result.licenseKey).then((success) => {
-        if (success) setIsPremium(isPremiumUser())
-      })
-    }
-  }, [])
 
   // Inicializar mapa
   useEffect(() => {
@@ -75,25 +59,16 @@ export default function TravelStampGenerator() {
         center: mapCenter,
         zoom: zoom,
         attributionControl: false,
-        preserveDrawingBuffer: true, // Importante para la captura
-        crossSourceCollisions: false,
+        preserveDrawingBuffer: true,
       })
 
-      // Añadir controles de navegación
       map.current.addControl(new mapboxgl.NavigationControl(), "top-right")
 
-      // Esperar a que el mapa cargue
       map.current.on("load", () => {
         setIsMapLoaded(true)
-        // Añadir fuente y capa para la ruta si hay ubicaciones
         if (locations.length > 1) {
           updateRoute()
         }
-      })
-
-      // Manejar errores de carga de tiles
-      map.current.on("error", (e) => {
-        console.error("Mapbox error:", e)
       })
     }
 
@@ -112,40 +87,9 @@ export default function TravelStampGenerator() {
     }
   }, [mapStyle])
 
-  // Función para obtener una imagen estática del mapa como respaldo
-  const getStaticMapImage = async () => {
-    if (!locations.length || !MAPBOX_TOKEN) return null
-
-    let bounds: mapboxgl.LngLatBounds
-    if (locations.length === 1) {
-      const [lng, lat] = locations[0].coordinates
-      bounds = new mapboxgl.LngLatBounds([lng - 0.1, lat - 0.1], [lng + 0.1, lat + 0.1])
-    } else {
-      bounds = new mapboxgl.LngLatBounds()
-      locations.forEach((loc) => bounds.extend(loc.coordinates))
-    }
-
-    const [west, south, east, north] = bounds.toArray().flat()
-
-    // Construir la URL de la imagen estática
-    const width = 1200
-    const height =
-      stampFormat === "square"
-        ? 1200
-        : stampFormat === "story"
-          ? Math.round((width * 16) / 9)
-          : Math.round((width * 3) / 4)
-
-    const path = locations.map((loc) => loc.coordinates.join(",")).join(";")
-
-    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/path-3+f97316(${path})/auto/${width}x${height}?padding=50&access_token=${MAPBOX_TOKEN}`
-
-    return url
-  }
-
-  // Calcular distancia total usando la fórmula de Haversine
-  const calculateHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371 // Radio de la Tierra en km
+  // Calcular distancia total
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371
     const dLat = ((lat2 - lat1) * Math.PI) / 180
     const dLon = ((lon2 - lon1) * Math.PI) / 180
     const a =
@@ -159,7 +103,7 @@ export default function TravelStampGenerator() {
     if (locationList.length < 2) return 0
     let total = 0
     for (let i = 1; i < locationList.length; i++) {
-      total += calculateHaversineDistance(
+      total += calculateDistance(
         locationList[i - 1].coordinates[1],
         locationList[i - 1].coordinates[0],
         locationList[i].coordinates[1],
@@ -175,7 +119,6 @@ export default function TravelStampGenerator() {
 
     const coordinates = locations.map((loc) => loc.coordinates)
 
-    // Eliminar la capa y fuente existentes si existen
     if (map.current.getLayer("route")) {
       map.current.removeLayer("route")
     }
@@ -183,7 +126,6 @@ export default function TravelStampGenerator() {
       map.current.removeSource("route")
     }
 
-    // Añadir nueva fuente y capa
     map.current.addSource("route", {
       type: "geojson",
       data: {
@@ -210,7 +152,6 @@ export default function TravelStampGenerator() {
       },
     })
 
-    // Ajustar la vista para mostrar toda la ruta
     const bounds = new mapboxgl.LngLatBounds()
     coordinates.forEach((coord) => bounds.extend(coord))
     map.current.fitBounds(bounds, {
@@ -251,7 +192,6 @@ export default function TravelStampGenerator() {
       coordinates: result.center as [number, number],
     }
 
-    // Crear y guardar el marcador
     const marker = new mapboxgl.Marker({ color: markerColor }).setLngLat(newLocation.coordinates).addTo(map.current)
     markersRef.current.push(marker)
 
@@ -261,11 +201,9 @@ export default function TravelStampGenerator() {
     setSearchResults([])
     setLocation("")
 
-    // Actualizar la ruta si hay más de una ubicación
     if (newLocations.length > 1) {
       updateRoute()
     } else {
-      // Si es la primera ubicación, centrar el mapa en ella
       map.current.flyTo({
         center: newLocation.coordinates,
         zoom: 10,
@@ -275,7 +213,6 @@ export default function TravelStampGenerator() {
 
   // Eliminar ubicación
   const removeLocation = (index: number) => {
-    // Eliminar el marcador correspondiente
     if (markersRef.current[index]) {
       markersRef.current[index].remove()
       markersRef.current.splice(index, 1)
@@ -286,24 +223,20 @@ export default function TravelStampGenerator() {
     setLocations(newLocations)
     setTotalDistance(calculateTotalDistance(newLocations))
 
-    // Actualizar la ruta
     if (newLocations.length > 1) {
       updateRoute()
     } else if (map.current) {
-      // Si solo queda una ubicación o ninguna, limpiar la ruta
       if (map.current.getLayer("route")) {
         map.current.removeLayer("route")
         map.current.removeSource("route")
       }
 
-      // Si queda una ubicación, centrar en ella
       if (newLocations.length === 1) {
         map.current.flyTo({
           center: newLocations[0].coordinates,
           zoom: 10,
         })
       } else {
-        // Si no quedan ubicaciones, volver a la vista inicial
         map.current.flyTo({
           center: mapCenter,
           zoom: zoom,
@@ -314,71 +247,110 @@ export default function TravelStampGenerator() {
 
   // Generar estampita
   const generateStamp = async () => {
-    if (!stampRef.current || !map.current) return
+    if (!map.current || !canvasRef.current) return
     setIsGenerating(true)
 
     try {
-      // Asegurar que el mapa está en posición
-      if (locations.length > 1) {
-        const bounds = new mapboxgl.LngLatBounds()
-        locations.forEach((loc) => bounds.extend(loc.coordinates))
-        map.current.fitBounds(bounds, {
-          padding: { top: 50, bottom: 50, left: 50, right: 50 },
-          maxZoom: 15,
-        })
+      // Obtener el canvas del mapa
+      const mapCanvas = map.current.getCanvas()
+      const canvas = canvasRef.current
+      const ctx = canvas.getContext("2d")
+      if (!ctx) return
+
+      // Configurar tamaño del canvas según el formato
+      const width = 1200
+      const height =
+        stampFormat === "square"
+          ? width
+          : stampFormat === "story"
+            ? Math.round((width * 16) / 9)
+            : Math.round((width * 3) / 4)
+
+      canvas.width = width
+      canvas.height = height
+
+      // Dibujar fondo
+      ctx.fillStyle = "#FFF7ED"
+      ctx.fillRect(0, 0, width, height)
+
+      // Dibujar el mapa
+      ctx.drawImage(mapCanvas, 0, 0, width, height)
+
+      // Configurar estilos de texto
+      ctx.textAlign = "center"
+      ctx.fillStyle = "white"
+      ctx.shadowColor = "rgba(0, 0, 0, 0.5)"
+      ctx.shadowBlur = 10
+      ctx.shadowOffsetX = 2
+      ctx.shadowOffsetY = 2
+
+      // Dibujar título
+      ctx.font = "bold 80px serif"
+      ctx.fillText(tripTitle || "Mi Viaje", width / 2, 120)
+
+      // Dibujar fecha
+      ctx.font = "40px serif"
+      ctx.fillText(tripDate || "2025", width / 2, 180)
+
+      // Dibujar sección inferior
+      const footerHeight = 200
+      ctx.shadowBlur = 0
+      ctx.shadowOffsetX = 0
+      ctx.shadowOffsetY = 0
+
+      // Fondo semi-transparente
+      ctx.fillStyle = "rgba(255, 251, 235, 0.9)"
+      ctx.fillRect(0, height - footerHeight, width, footerHeight)
+
+      // Distancia recorrida
+      ctx.fillStyle = "#92400E"
+      ctx.font = "bold 32px sans-serif"
+      ctx.fillText(`${totalDistance} km recorridos`, width / 2, height - footerHeight + 50)
+
+      // Comentario del viaje
+      if (tripComment) {
+        ctx.font = "italic 28px serif"
+        ctx.fillStyle = "#78350F"
+        ctx.fillText(`"${tripComment}"`, width / 2, height - footerHeight + 100)
       }
 
-      // Esperar a que el mapa se renderice completamente
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Footer
+      ctx.font = "16px sans-serif"
+      ctx.fillStyle = "#B45309"
+      ctx.textAlign = "left"
+      ctx.fillText("travelprint.me", 40, height - 30)
+      ctx.textAlign = "right"
+      ctx.fillText("Mi recuerdo de viaje", width - 40, height - 30)
 
-      // Intentar primero con html2canvas
-      try {
-        const canvas = await html2canvas(stampRef.current, {
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: null,
-          scale: 2,
-          logging: true,
-          onclone: (document) => {
-            // Asegurarse de que las imágenes del mapa sean visibles en el clon
-            const mapImages = document.getElementsByClassName("mapboxgl-canvas")
-            Array.from(mapImages).forEach((img: any) => {
-              if (img) {
-                img.style.visibility = "visible"
-                img.crossOrigin = "anonymous"
-              }
-            })
-          },
-        })
-
-        const imageUrl = canvas.toDataURL("image/png")
-
-        // Verificar si la imagen capturada tiene contenido válido
-        const img = new Image()
-        img.src = imageUrl
-        await new Promise((resolve, reject) => {
-          img.onload = () => {
-            if (img.width > 1 && img.height > 1) {
-              setGeneratedMap(imageUrl)
-              resolve(true)
-            } else {
-              reject(new Error("Invalid image generated"))
-            }
-          }
-          img.onerror = reject
-        })
-      } catch (error) {
-        console.error("Error with html2canvas, falling back to static map:", error)
-        // Fallback: usar imagen estática de Mapbox
-        const staticMapUrl = await getStaticMapImage()
-        if (staticMapUrl) {
-          setGeneratedMap(staticMapUrl)
-        } else {
-          throw new Error("Could not generate map image")
-        }
-      }
+      // Guardar la imagen generada
+      setGeneratedMap(canvas.toDataURL("image/png"))
     } catch (error) {
       console.error("Error generating stamp:", error)
+
+      // Intentar con la API estática de Mapbox como respaldo
+      try {
+        if (!locations.length || !MAPBOX_TOKEN) return
+
+        const bounds = new mapboxgl.LngLatBounds()
+        locations.forEach((loc) => bounds.extend(loc.coordinates))
+        const [west, south, east, north] = bounds.toArray().flat()
+
+        const width = 1200
+        const height =
+          stampFormat === "square"
+            ? width
+            : stampFormat === "story"
+              ? Math.round((width * 16) / 9)
+              : Math.round((width * 3) / 4)
+
+        const path = locations.map((loc) => loc.coordinates.join(",")).join(";")
+
+        const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/path-3+f97316(${path})/[${west},${south},${east},${north}]/${width}x${height}@2x?padding=50&access_token=${MAPBOX_TOKEN}`
+
+        setGeneratedMap(url)
+      } catch (fallbackError) {
+        console.error("Error with static map fallback:", fallbackError)
+      }
     } finally {
       setIsGenerating(false)
     }
@@ -545,10 +517,11 @@ export default function TravelStampGenerator() {
 
       {/* Vista previa de la estampita */}
       <div
-        ref={stampRef}
         className={`relative ${getAspectRatioClass()} rounded-3xl overflow-hidden bg-amber-50 mx-auto max-w-2xl shadow-xl`}
-        style={{ minHeight: "400px" }} // Asegurar altura mínima
       >
+        {/* Canvas para la generación de la imagen */}
+        <canvas ref={canvasRef} className="hidden" />
+
         {/* Contenedor del mapa */}
         <div
           ref={mapContainer}
@@ -623,6 +596,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
