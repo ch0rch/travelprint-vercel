@@ -2,13 +2,16 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { MapPin, Download, X, Plus, Search, Square, Maximize, AlignJustify } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Crown, Download, MapPin, RefreshCw, Plus } from "lucide-react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
+import { isPremiumUser } from "@/utils/premium-storage"
+import { getRemainingDays } from "@/utils/premium-storage"
 
 // Mapbox token
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -23,14 +26,22 @@ interface Location {
   coordinates: [number, number]
 }
 
-type StampFormat = "square" | "rectangle" | "story"
+// Estilos de mapa disponibles
+const mapStyles = [
+  { id: "streets-v12", name: "Aventura", premium: false },
+  { id: "outdoors-v12", name: "Naturaleza", premium: false },
+  { id: "satellite-v9", name: "Satélite", premium: true },
+  { id: "navigation-night-v1", name: "Nocturno", premium: true },
+  { id: "light-v11", name: "Claro", premium: false },
+  { id: "dark-v11", name: "Oscuro", premium: true },
+]
 
 export default function TravelStampGenerator() {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [mapStyle, setMapStyle] = useState("mapbox://styles/mapbox/satellite-v9")
+  const [mapStyle, setMapStyle] = useState("streets-v12")
   const [zoom, setZoom] = useState(4)
   const [location, setLocation] = useState("")
   const [locations, setLocations] = useState<Location[]>([])
@@ -38,15 +49,17 @@ export default function TravelStampGenerator() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
-  const [tripTitle, setTripTitle] = useState("")
-  const [tripDate, setTripDate] = useState("")
-  const [tripComment, setTripComment] = useState("")
-  const [totalDistance, setTotalDistance] = useState(0)
-  const [mapCenter, setMapCenter] = useState<[number, number]>([-70.6483, -33.4569])
-  const [stampFormat, setStampFormat] = useState<StampFormat>("rectangle")
-  const [markerColor] = useState("#F97316")
-  const [routeColor] = useState("#F97316")
+  const [mapCenter] = useState<[number, number]>([-70.6483, -33.4569])
   const [isMapLoaded, setIsMapLoaded] = useState(false)
+  const [isPremium, setIsPremium] = useState(false)
+  const [remainingDays, setRemainingDays] = useState(0)
+  const [totalDistance, setTotalDistance] = useState(0)
+
+  // Verificar estado premium
+  useEffect(() => {
+    setIsPremium(isPremiumUser())
+    setRemainingDays(getRemainingDays())
+  }, [])
 
   // Inicializar mapa
   useEffect(() => {
@@ -55,7 +68,7 @@ export default function TravelStampGenerator() {
     if (!map.current) {
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: mapStyle,
+        style: `mapbox://styles/mapbox/${mapStyle}`,
         center: mapCenter,
         zoom: zoom,
         attributionControl: false,
@@ -83,7 +96,7 @@ export default function TravelStampGenerator() {
   // Actualizar el estilo del mapa cuando cambia
   useEffect(() => {
     if (map.current) {
-      map.current.setStyle(mapStyle)
+      map.current.setStyle(`mapbox://styles/mapbox/${mapStyle}`)
     }
   }, [mapStyle])
 
@@ -147,7 +160,7 @@ export default function TravelStampGenerator() {
         "line-cap": "round",
       },
       paint: {
-        "line-color": routeColor,
+        "line-color": "#F97316",
         "line-width": 3,
       },
     })
@@ -192,7 +205,7 @@ export default function TravelStampGenerator() {
       coordinates: result.center as [number, number],
     }
 
-    const marker = new mapboxgl.Marker({ color: markerColor }).setLngLat(newLocation.coordinates).addTo(map.current)
+    const marker = new mapboxgl.Marker({ color: "#F97316" }).setLngLat(newLocation.coordinates).addTo(map.current)
     markersRef.current.push(marker)
 
     const newLocations = [...locations, newLocation]
@@ -211,141 +224,41 @@ export default function TravelStampGenerator() {
     }
   }
 
-  // Eliminar ubicación
-  const removeLocation = (index: number) => {
-    if (markersRef.current[index]) {
-      markersRef.current[index].remove()
-      markersRef.current.splice(index, 1)
-    }
-
-    const newLocations = [...locations]
-    newLocations.splice(index, 1)
-    setLocations(newLocations)
-    setTotalDistance(calculateTotalDistance(newLocations))
-
-    if (newLocations.length > 1) {
-      updateRoute()
-    } else if (map.current) {
-      if (map.current.getLayer("route")) {
-        map.current.removeLayer("route")
-        map.current.removeSource("route")
-      }
-
-      if (newLocations.length === 1) {
-        map.current.flyTo({
-          center: newLocations[0].coordinates,
-          zoom: 10,
-        })
-      } else {
-        map.current.flyTo({
-          center: mapCenter,
-          zoom: zoom,
-        })
-      }
-    }
-  }
-
   // Generar estampita
   const generateStamp = async () => {
     if (!map.current || !canvasRef.current) return
     setIsGenerating(true)
 
     try {
-      // Obtener el canvas del mapa
       const mapCanvas = map.current.getCanvas()
       const canvas = canvasRef.current
       const ctx = canvas.getContext("2d")
       if (!ctx) return
 
-      // Configurar tamaño del canvas según el formato
       const width = 1200
-      const height =
-        stampFormat === "square"
-          ? width
-          : stampFormat === "story"
-            ? Math.round((width * 16) / 9)
-            : Math.round((width * 3) / 4)
+      const height = Math.round((width * 3) / 4)
 
       canvas.width = width
       canvas.height = height
 
-      // Dibujar fondo
       ctx.fillStyle = "#FFF7ED"
       ctx.fillRect(0, 0, width, height)
-
-      // Dibujar el mapa
       ctx.drawImage(mapCanvas, 0, 0, width, height)
 
-      // Configurar estilos de texto
-      ctx.textAlign = "center"
-      ctx.fillStyle = "white"
-      ctx.shadowColor = "rgba(0, 0, 0, 0.5)"
-      ctx.shadowBlur = 10
-      ctx.shadowOffsetX = 2
-      ctx.shadowOffsetY = 2
-
-      // Dibujar título
-      ctx.font = "bold 80px serif"
-      ctx.fillText(tripTitle || "Mi Viaje", width / 2, 120)
-
-      // Dibujar fecha
-      ctx.font = "40px serif"
-      ctx.fillText(tripDate || "2025", width / 2, 180)
-
-      // Dibujar sección inferior
-      const footerHeight = 200
-      ctx.shadowBlur = 0
-      ctx.shadowOffsetX = 0
-      ctx.shadowOffsetY = 0
-
-      // Fondo semi-transparente
-      ctx.fillStyle = "rgba(255, 251, 235, 0.9)"
-      ctx.fillRect(0, height - footerHeight, width, footerHeight)
-
-      // Distancia recorrida
-      ctx.fillStyle = "#92400E"
-      ctx.font = "bold 32px sans-serif"
-      ctx.fillText(`${totalDistance} km recorridos`, width / 2, height - footerHeight + 50)
-
-      // Comentario del viaje
-      if (tripComment) {
-        ctx.font = "italic 28px serif"
-        ctx.fillStyle = "#78350F"
-        ctx.fillText(`"${tripComment}"`, width / 2, height - footerHeight + 100)
-      }
-
-      // Footer
-      ctx.font = "16px sans-serif"
-      ctx.fillStyle = "#B45309"
-      ctx.textAlign = "left"
-      ctx.fillText("travelprint.me", 40, height - 30)
-      ctx.textAlign = "right"
-      ctx.fillText("Mi recuerdo de viaje", width - 40, height - 30)
-
-      // Guardar la imagen generada
       setGeneratedMap(canvas.toDataURL("image/png"))
     } catch (error) {
       console.error("Error generating stamp:", error)
 
-      // Intentar con la API estática de Mapbox como respaldo
+      // Fallback a API estática
       try {
         if (!locations.length || !MAPBOX_TOKEN) return
 
         const bounds = new mapboxgl.LngLatBounds()
         locations.forEach((loc) => bounds.extend(loc.coordinates))
         const [west, south, east, north] = bounds.toArray().flat()
-
-        const width = 1200
-        const height =
-          stampFormat === "square"
-            ? width
-            : stampFormat === "story"
-              ? Math.round((width * 16) / 9)
-              : Math.round((width * 3) / 4)
-
         const path = locations.map((loc) => loc.coordinates.join(",")).join(";")
 
-        const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/path-3+f97316(${path})/[${west},${south},${east},${north}]/${width}x${height}@2x?padding=50&access_token=${MAPBOX_TOKEN}`
+        const url = `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/static/path-3+f97316(${path})/[${west},${south},${east},${north}]/1200x900@2x?padding=50&access_token=${MAPBOX_TOKEN}`
 
         setGeneratedMap(url)
       } catch (fallbackError) {
@@ -356,94 +269,33 @@ export default function TravelStampGenerator() {
     }
   }
 
-  // Descargar estampita
-  const downloadStamp = () => {
-    if (!generatedMap) return
-
-    const link = document.createElement("a")
-    link.href = generatedMap
-    link.download = `${tripTitle.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}.png`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  // Obtener la clase de aspecto según el formato
-  const getAspectRatioClass = () => {
-    switch (stampFormat) {
-      case "square":
-        return "aspect-square"
-      case "rectangle":
-        return "aspect-[4/3]"
-      case "story":
-        return "aspect-[9/16]"
-      default:
-        return "aspect-[4/3]"
-    }
-  }
-
   return (
-    <div className="space-y-6">
-      {/* Panel de control */}
-      <Card>
-        <CardContent className="p-6 space-y-4">
-          <div>
-            <Label htmlFor="trip-title">Título del viaje</Label>
-            <Input
-              id="trip-title"
-              value={tripTitle}
-              onChange={(e) => setTripTitle(e.target.value)}
-              placeholder="Ej: Ruta del Mar - Chile"
-              className="mt-1"
-            />
-          </div>
+    <div className="grid lg:grid-cols-[1fr,400px] gap-6">
+      {/* Panel principal */}
+      <div className="space-y-6">
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Generador de Estampitas</h2>
 
-          <div>
-            <Label htmlFor="trip-date">Fecha</Label>
-            <Input
-              id="trip-date"
-              value={tripDate}
-              onChange={(e) => setTripDate(e.target.value)}
-              placeholder="Ej: Marzo 2025"
-              className="mt-1"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="trip-comment">Descripción del viaje (máx. 150 caracteres)</Label>
-            <Textarea
-              id="trip-comment"
-              value={tripComment}
-              onChange={(e) => {
-                if (e.target.value.length <= 150) {
-                  setTripComment(e.target.value)
-                }
-              }}
-              placeholder="Describe tu experiencia..."
-              className="mt-1 min-h-[100px]"
-              maxLength={150}
-            />
-            <div className="flex justify-end mt-1">
-              <span className="text-xs text-muted-foreground">{tripComment.length}/150</span>
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="location">Buscar ubicación</Label>
-            <div className="flex gap-2 mt-1">
+          {/* Buscador de destinos */}
+          <div className="space-y-2">
+            <Label>Añadir destino</Label>
+            <div className="flex gap-2">
               <Input
-                id="location"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && searchLocation()}
-                placeholder="Ej: Valparaíso, Chile"
+                placeholder="Ej: Talca, Constitución, Concepción..."
               />
               <Button onClick={searchLocation} disabled={isSearching}>
-                <Search className="h-4 w-4" />
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
+            <p className="text-sm text-muted-foreground">
+              También puedes hacer clic en el mapa para añadir destinos de forma precisa
+            </p>
           </div>
 
+          {/* Resultados de búsqueda */}
           {searchResults.length > 0 && (
             <div className="border rounded-lg divide-y">
               {searchResults.map((result, index) => (
@@ -464,138 +316,149 @@ export default function TravelStampGenerator() {
             </div>
           )}
 
-          {locations.length > 0 && (
-            <div>
-              <Label>Destinos ({locations.length})</Label>
-              <div className="mt-1 space-y-2">
-                {locations.map((loc, index) => (
-                  <div key={index} className="flex items-center justify-between bg-muted p-2 rounded-lg">
-                    <span className="flex items-center">
-                      <MapPin className="h-4 w-4 text-amber-500 mr-2" />
-                      {loc.name}
-                    </span>
-                    <Button variant="ghost" size="sm" onClick={() => removeLocation(index)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div>
-            <Label>Formato de estampita</Label>
-            <div className="grid grid-cols-3 gap-3 mt-2">
-              <div
-                className={`border rounded-lg p-3 cursor-pointer transition-all hover:bg-muted flex flex-col items-center
-                  ${stampFormat === "square" ? "bg-muted ring-2 ring-amber-500" : ""}`}
-                onClick={() => setStampFormat("square")}
-              >
-                <Square className="h-6 w-6 mb-1" />
-                <span className="text-sm font-medium">Cuadrado</span>
-              </div>
-              <div
-                className={`border rounded-lg p-3 cursor-pointer transition-all hover:bg-muted flex flex-col items-center
-                  ${stampFormat === "rectangle" ? "bg-muted ring-2 ring-amber-500" : ""}`}
-                onClick={() => setStampFormat("rectangle")}
-              >
-                <Maximize className="h-6 w-6 mb-1" />
-                <span className="text-sm font-medium">Rectangular</span>
-              </div>
-              <div
-                className={`border rounded-lg p-3 cursor-pointer transition-all hover:bg-muted flex flex-col items-center
-                  ${stampFormat === "story" ? "bg-muted ring-2 ring-amber-500" : ""}`}
-                onClick={() => setStampFormat("story")}
-              >
-                <AlignJustify className="h-6 w-6 mb-1" />
-                <span className="text-sm font-medium">Historia</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Vista previa de la estampita */}
-      <div
-        className={`relative ${getAspectRatioClass()} rounded-3xl overflow-hidden bg-amber-50 mx-auto max-w-2xl shadow-xl`}
-      >
-        {/* Canvas para la generación de la imagen */}
-        <canvas ref={canvasRef} className="hidden" />
-
-        {/* Contenedor del mapa */}
-        <div
-          ref={mapContainer}
-          className="absolute inset-0"
-          style={{ visibility: isMapLoaded ? "visible" : "hidden" }}
-        />
-
-        {/* Overlay con título y fecha */}
-        <div className="absolute inset-0 flex flex-col items-center justify-between p-8 z-10">
-          <div className="text-center">
-            <h1
-              className="text-4xl md:text-5xl font-serif font-bold mb-2"
-              style={{
-                color: "white",
-                textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
-              }}
-            >
-              {tripTitle || "Mi Viaje"}
-            </h1>
-            <p
-              className="text-2xl md:text-3xl font-serif"
-              style={{
-                color: "white",
-                textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
-              }}
-            >
-              {tripDate || "2025"}
-            </p>
-          </div>
-        </div>
-
-        {/* Sección inferior con distancia y comentario */}
-        <div className="absolute bottom-0 inset-x-0 bg-[rgba(255,251,235,0.9)] p-6 space-y-4 z-10">
-          <div className="text-center">
-            <span className="inline-block px-4 py-1 rounded-full bg-amber-100 text-amber-800 font-medium text-lg">
-              {totalDistance} km recorridos
-            </span>
+          {/* Mapa */}
+          <div className="relative aspect-[4/3] rounded-lg overflow-hidden border bg-muted">
+            <div
+              ref={mapContainer}
+              className="absolute inset-0"
+              style={{ visibility: isMapLoaded ? "visible" : "hidden" }}
+            />
           </div>
 
-          {tripComment && (
-            <div className="relative text-center px-8">
-              <span className="absolute left-0 top-0 text-4xl text-amber-800 font-serif">"</span>
-              <p className="text-lg md:text-xl text-amber-900 font-serif italic leading-relaxed">{tripComment}</p>
-              <span className="absolute right-0 bottom-0 text-4xl text-amber-800 font-serif">"</span>
-            </div>
-          )}
+          {/* Controles */}
+          <Tabs defaultValue="style">
+            <TabsList className="w-full">
+              <TabsTrigger value="style">Estilo de Mapa</TabsTrigger>
+              <TabsTrigger value="stamp">Estilo de Estampita</TabsTrigger>
+              <TabsTrigger value="format">Formato</TabsTrigger>
+            </TabsList>
 
-          <div className="flex justify-between text-sm text-amber-700">
-            <span>travelprint.me</span>
-            <span>Mi recuerdo de viaje</span>
-          </div>
+            <TabsContent value="style" className="space-y-4">
+              <div className="space-y-2">
+                <Label>Estilo de mapa</Label>
+                <Select value={mapStyle} onValueChange={setMapStyle}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un estilo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mapStyles.map((style) => (
+                      <SelectItem
+                        key={style.id}
+                        value={style.id}
+                        disabled={style.premium && !isPremium}
+                        className="flex items-center justify-between"
+                      >
+                        <span>{style.name}</span>
+                        {style.premium && <Crown className="h-4 w-4 text-amber-500" />}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 
-      {/* Botones de acción */}
-      <div className="flex justify-center gap-4">
-        <Button
-          onClick={generateStamp}
-          disabled={locations.length < 2 || isGenerating}
-          className="bg-gradient-to-r from-amber-500 to-amber-700"
-        >
-          {isGenerating ? "Generando..." : "Generar Estampita"}
-        </Button>
+      {/* Panel lateral */}
+      <Card className="p-6 space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold mb-2">Vista Previa</h3>
 
-        {generatedMap && (
-          <Button onClick={downloadStamp} variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Descargar
+          {/* Badge Premium */}
+          {isPremium && (
+            <div className="flex items-center gap-2 mb-4">
+              <div className="bg-amber-50 text-amber-700 px-2 py-1 rounded-md text-sm font-medium border border-amber-200 flex items-center gap-1">
+                <Crown className="h-4 w-4 text-amber-500" />
+                Premium
+              </div>
+              <span className="text-sm text-muted-foreground">
+                Tu suscripción premium expira el {new Date().toLocaleDateString()} ({remainingDays} días restantes)
+              </span>
+            </div>
+          )}
+
+          {/* Vista previa del mapa */}
+          <div className="aspect-[4/3] rounded-lg overflow-hidden bg-muted mb-4 flex items-center justify-center">
+            {locations.length < 2 ? (
+              <div className="text-center p-8">
+                <MapPin className="h-12 w-12 mx-auto mb-4 text-amber-500" />
+                <p className="text-amber-800 font-medium">Añade al menos dos destinos para generar tu estampita</p>
+              </div>
+            ) : generatedMap ? (
+              <img
+                src={generatedMap || "/placeholder.svg"}
+                alt="Vista previa de la estampita"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="text-center">
+                <Button
+                  onClick={generateStamp}
+                  disabled={isGenerating}
+                  className="bg-gradient-to-r from-amber-500 to-amber-700"
+                >
+                  {isGenerating ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Generando...
+                    </>
+                  ) : (
+                    "Generar vista previa"
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Botón de descarga */}
+          <Button className="w-full flex items-center justify-center gap-2" disabled={!generatedMap} variant="outline">
+            <Download className="h-4 w-4" />
+            Descarga tu recuerdo
           </Button>
+        </div>
+
+        {/* Características Premium */}
+        {!isPremium && (
+          <div className="space-y-4">
+            <h4 className="font-medium flex items-center gap-2">
+              <Crown className="h-4 w-4 text-amber-500" />
+              Características Premium
+            </h4>
+            <ul className="space-y-2 text-sm">
+              <li className="flex items-center gap-2">
+                <span className="text-amber-500">✓</span>
+                Formatos adicionales (vertical, horizontal, historia)
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-amber-500">✓</span>
+                Estilos de mapa premium (satélite, nocturno)
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-amber-500">✓</span>
+                Comentarios personalizados
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-amber-500">✓</span>
+                Descarga sin marca de agua
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="text-amber-500">✓</span>
+                Alta resolución (4x)
+              </li>
+            </ul>
+            <Button className="w-full bg-gradient-to-r from-amber-500 to-amber-700">
+              <Crown className="h-4 w-4 mr-2" />
+              Renovar premium ($5)
+            </Button>
+          </div>
         )}
-      </div>
+      </Card>
     </div>
   )
 }
+
+
 
 
 
