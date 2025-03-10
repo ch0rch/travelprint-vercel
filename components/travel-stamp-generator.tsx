@@ -12,7 +12,6 @@ import { verifyAndSavePremiumStatus, isPremiumUser } from "@/utils/premium-stora
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import html2canvas from "html2canvas"
-import * as turf from "@turf/turf"
 
 // Mapbox token
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -92,17 +91,38 @@ export default function TravelStampGenerator() {
     }
   }, [mapStyle])
 
-  // Calcular distancia total
+  // Calcular distancia total usando la fórmula de Haversine
   const calculateTotalDistance = (locationList: Location[]) => {
     if (locationList.length < 2) return 0
 
     let total = 0
     for (let i = 1; i < locationList.length; i++) {
-      const from = turf.point(locationList[i - 1].coordinates)
-      const to = turf.point(locationList[i].coordinates)
-      total += turf.distance(from, to, { units: "kilometers" })
+      total += calculateHaversineDistance(
+        locationList[i - 1].coordinates[1], // lat1
+        locationList[i - 1].coordinates[0], // lon1
+        locationList[i].coordinates[1], // lat2
+        locationList[i].coordinates[0], // lon2
+      )
     }
     return Math.round(total)
+  }
+
+  // Fórmula de Haversine para calcular distancia entre dos puntos en la Tierra
+  const calculateHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371 // Radio de la Tierra en km
+    const dLat = toRad(lat2 - lat1)
+    const dLon = toRad(lon2 - lon1)
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    const distance = R * c
+    return distance
+  }
+
+  // Convertir grados a radianes
+  const toRad = (value: number) => {
+    return (value * Math.PI) / 180
   }
 
   // Buscar ubicación
