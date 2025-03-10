@@ -14,11 +14,15 @@ import "mapbox-gl/dist/mapbox-gl.css"
 import { isPremiumUser } from "@/utils/premium-storage"
 import { getRemainingDays } from "@/utils/premium-storage"
 
-// Mapbox token
+// Mapbox token - IMPORTANT: Must be configured in your .env.local file
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
-// Inicializar Mapbox
-if (MAPBOX_TOKEN) {
+// Verificar y configurar el token de Mapbox
+if (!MAPBOX_TOKEN) {
+  console.error(
+    "⚠️ El token de Mapbox no está configurado. Asegúrate de añadir NEXT_PUBLIC_MAPBOX_TOKEN en tu archivo .env.local",
+  )
+} else {
   mapboxgl.accessToken = MAPBOX_TOKEN
 }
 
@@ -50,7 +54,7 @@ export default function TravelStampGenerator() {
   const map = useRef<mapboxgl.Map | null>(null)
   const markersRef = useRef<mapboxgl.Marker[]>([])
   const [mapStyle, setMapStyle] = useState("streets-v12")
-  const [zoom, setZoom] = useState(4)
+  const [zoom, setZoom] = useState(3)
   const [location, setLocation] = useState("")
   const [locations, setLocations] = useState<Location[]>([])
   const [generatedMap, setGeneratedMap] = useState<string | null>(null)
@@ -78,13 +82,13 @@ export default function TravelStampGenerator() {
   // Inicializar mapa
   useEffect(() => {
     if (!mapContainer.current || !MAPBOX_TOKEN) {
-      setMapError("No se pudo inicializar el mapa. Verifica tu conexión a internet.")
+      setMapError("No se pudo inicializar el mapa. Verifica que el token de Mapbox esté configurado correctamente.")
       return
     }
 
     try {
       if (!map.current) {
-        map.current = new mapboxgl.Map({
+        const newMap = new mapboxgl.Map({
           container: mapContainer.current,
           style: `mapbox://styles/mapbox/${mapStyle}`,
           center: mapCenter,
@@ -93,32 +97,40 @@ export default function TravelStampGenerator() {
           preserveDrawingBuffer: true,
         })
 
-        map.current.addControl(new mapboxgl.NavigationControl(), "top-right")
+        // Añadir controles de navegación
+        newMap.addControl(new mapboxgl.NavigationControl(), "top-right")
 
-        // Permitir añadir marcadores haciendo clic en el mapa
-        map.current.on("click", (e) => {
-          addLocationByCoordinates(e.lngLat.lng, e.lngLat.lat)
-        })
-
-        map.current.on("load", () => {
-          console.log("Mapa cargado correctamente")
+        // Manejar eventos del mapa
+        newMap.on("load", () => {
+          console.log("✅ Mapa cargado correctamente")
           setIsMapLoaded(true)
           setMapError(null)
+          map.current = newMap
+
+          // Si hay ubicaciones, actualizar la ruta
           if (locations.length > 1) {
             updateRoute()
           }
         })
 
-        map.current.on("error", (e) => {
-          console.error("Error en el mapa:", e)
-          setMapError("Error al cargar el mapa: " + e.error?.message || "Error desconocido")
+        newMap.on("error", (e) => {
+          console.error("❌ Error en el mapa:", e)
+          setMapError(`Error al cargar el mapa: ${e.error?.message || "Error desconocido"}`)
         })
+
+        // Permitir añadir marcadores haciendo clic en el mapa
+        newMap.on("click", (e) => {
+          addLocationByCoordinates(e.lngLat.lng, e.lngLat.lat)
+        })
+
+        map.current = newMap
       }
     } catch (error) {
-      console.error("Error al inicializar el mapa:", error)
-      setMapError("Error al inicializar el mapa. Verifica tu conexión a internet.")
+      console.error("❌ Error al inicializar el mapa:", error)
+      setMapError("Error al inicializar el mapa. Verifica tu conexión a internet y el token de Mapbox.")
     }
 
+    // Cleanup
     return () => {
       if (map.current) {
         map.current.remove()
@@ -129,28 +141,31 @@ export default function TravelStampGenerator() {
 
   // Actualizar el estilo del mapa cuando cambia
   useEffect(() => {
-    if (map.current) {
-      try {
-        map.current.setStyle(`mapbox://styles/mapbox/${mapStyle}`)
+    if (!map.current) return
 
-        // Volver a añadir la ruta después de cambiar el estilo
-        map.current.once("style.load", () => {
-          if (locations.length > 1) {
-            updateRoute()
-          }
+    try {
+      map.current.setStyle(`mapbox://styles/mapbox/${mapStyle}`)
 
-          // Volver a añadir los marcadores
-          markersRef.current.forEach((marker) => marker.remove())
-          markersRef.current = []
+      // Volver a añadir la ruta y marcadores después de cambiar el estilo
+      map.current.once("style.load", () => {
+        // Limpiar marcadores existentes
+        markersRef.current.forEach((marker) => marker.remove())
+        markersRef.current = []
 
-          locations.forEach((location) => {
-            const marker = new mapboxgl.Marker({ color: "#F97316" }).setLngLat(location.coordinates).addTo(map.current!)
-            markersRef.current.push(marker)
-          })
+        // Volver a añadir los marcadores
+        locations.forEach((location) => {
+          const marker = new mapboxgl.Marker({ color: "#F97316" }).setLngLat(location.coordinates).addTo(map.current!)
+          markersRef.current.push(marker)
         })
-      } catch (error) {
-        console.error("Error al cambiar el estilo del mapa:", error)
-      }
+
+        // Actualizar la ruta si hay más de una ubicación
+        if (locations.length > 1) {
+          updateRoute()
+        }
+      })
+    } catch (error) {
+      console.error("❌ Error al cambiar el estilo del mapa:", error)
+      setMapError("Error al cambiar el estilo del mapa. Intenta recargar la página.")
     }
   }, [mapStyle])
 
@@ -174,24 +189,33 @@ export default function TravelStampGenerator() {
         coordinates: [lng, lat] as [number, number],
       }
 
+      // Añadir marcador
       const marker = new mapboxgl.Marker({ color: "#F97316" }).setLngLat(newLocation.coordinates).addTo(map.current)
       markersRef.current.push(marker)
 
+      // Actualizar estado
       const newLocations = [...locations, newLocation]
       setLocations(newLocations)
       setTotalDistance(calculateTotalDistance(newLocations))
 
+      // Actualizar ruta si hay más de una ubicación
       if (newLocations.length > 1) {
         updateRoute()
       }
+
+      // Centrar el mapa en la nueva ubicación
+      map.current.flyTo({
+        center: newLocation.coordinates,
+        zoom: 10,
+      })
     } catch (error) {
-      console.error("Error al añadir ubicación:", error)
+      console.error("❌ Error al añadir ubicación:", error)
     }
   }
 
   // Calcular distancia total
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371
+    const R = 6371 // Radio de la Tierra en km
     const dLat = ((lat2 - lat1) * Math.PI) / 180
     const dLon = ((lon2 - lon1) * Math.PI) / 180
     const a =
@@ -222,51 +246,66 @@ export default function TravelStampGenerator() {
     try {
       const coordinates = locations.map((loc) => loc.coordinates)
 
-      // Verificar si el mapa ya tiene la capa y la fuente
-      if (map.current.getLayer("route")) {
-        map.current.removeLayer("route")
+      // Esperar a que el mapa esté listo
+      if (!map.current.isStyleLoaded()) {
+        map.current.once("style.load", () => {
+          addRouteToMap(coordinates)
+        })
+        return
       }
-      if (map.current.getSource("route")) {
-        map.current.removeSource("route")
-      }
 
-      // Añadir la fuente y la capa
-      map.current.addSource("route", {
-        type: "geojson",
-        data: {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "LineString",
-            coordinates: coordinates,
-          },
-        },
-      })
-
-      map.current.addLayer({
-        id: "route",
-        type: "line",
-        source: "route",
-        layout: {
-          "line-join": "round",
-          "line-cap": "round",
-        },
-        paint: {
-          "line-color": "#F97316",
-          "line-width": 3,
-        },
-      })
-
-      // Ajustar la vista para mostrar toda la ruta
-      const bounds = new mapboxgl.LngLatBounds()
-      coordinates.forEach((coord) => bounds.extend(coord))
-      map.current.fitBounds(bounds, {
-        padding: { top: 50, bottom: 50, left: 50, right: 50 },
-        maxZoom: 15,
-      })
+      addRouteToMap(coordinates)
     } catch (error) {
-      console.error("Error al actualizar la ruta:", error)
+      console.error("❌ Error al actualizar la ruta:", error)
     }
+  }
+
+  // Función auxiliar para añadir la ruta al mapa
+  const addRouteToMap = (coordinates: [number, number][]) => {
+    if (!map.current) return
+
+    // Remover ruta existente si la hay
+    if (map.current.getLayer("route")) {
+      map.current.removeLayer("route")
+    }
+    if (map.current.getSource("route")) {
+      map.current.removeSource("route")
+    }
+
+    // Añadir nueva ruta
+    map.current.addSource("route", {
+      type: "geojson",
+      data: {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "LineString",
+          coordinates: coordinates,
+        },
+      },
+    })
+
+    map.current.addLayer({
+      id: "route",
+      type: "line",
+      source: "route",
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+      },
+      paint: {
+        "line-color": "#F97316",
+        "line-width": 3,
+      },
+    })
+
+    // Ajustar la vista para mostrar toda la ruta
+    const bounds = new mapboxgl.LngLatBounds()
+    coordinates.forEach((coord) => bounds.extend(coord))
+    map.current.fitBounds(bounds, {
+      padding: { top: 50, bottom: 50, left: 50, right: 50 },
+      maxZoom: 15,
+    })
   }
 
   // Buscar ubicación
@@ -286,7 +325,7 @@ export default function TravelStampGenerator() {
       const data = await response.json()
       setSearchResults(data.features || [])
     } catch (error) {
-      console.error("Error:", error)
+      console.error("❌ Error en la búsqueda:", error)
     } finally {
       setIsSearching(false)
     }
@@ -396,116 +435,100 @@ export default function TravelStampGenerator() {
       // Construir la URL de la imagen estática
       const staticMapUrl = `https://api.mapbox.com/styles/v1/mapbox/${mapStyle}/static/path-3+f97316(${path})/[${west},${south},${east},${north}]/${width}x${height}@2x?padding=50&access_token=${MAPBOX_TOKEN}`
 
-      // Subir a Cloudinary (simulado)
-      const cloudinaryUrl = await uploadToCloudinary(staticMapUrl, tripTitle)
+      // Crear un canvas para componer la imagen final
+      const canvas = document.createElement("canvas")
+      const ctx = canvas.getContext("2d")
+      if (!ctx) throw new Error("No se pudo obtener el contexto del canvas")
 
-      setGeneratedMap(cloudinaryUrl || staticMapUrl)
-      setShareUrl(cloudinaryUrl || staticMapUrl)
-    } catch (error) {
-      console.error("Error generating stamp:", error)
-      setMapError("Error al generar la estampita. Intenta de nuevo.")
+      canvas.width = width
+      canvas.height = height
 
-      // Intentar con captura directa del canvas como respaldo
-      try {
-        if (!map.current) return
+      // Cargar y dibujar el mapa
+      const mapImage = new Image()
+      mapImage.crossOrigin = "anonymous"
 
-        const mapCanvas = map.current.getCanvas()
-        const canvas = document.createElement("canvas")
-        const ctx = canvas.getContext("2d")
-        if (!ctx) throw new Error("No se pudo obtener el contexto del canvas")
+      await new Promise((resolve, reject) => {
+        mapImage.onload = resolve
+        mapImage.onerror = reject
+        mapImage.src = staticMapUrl
+      })
 
-        // Configurar dimensiones
-        let width = 1200
-        let height = 900
+      // Dibujar el mapa
+      ctx.drawImage(mapImage, 0, 0, width, height)
 
-        if (stampFormat === "portrait") {
-          width = 900
-          height = 1200
-        } else if (stampFormat === "square") {
-          width = 1200
-          height = 1200
-        } else if (stampFormat === "story") {
-          width = 1080
-          height = 1920
-        }
+      // Añadir elementos de texto
+      ctx.textAlign = "center"
+      ctx.fillStyle = "white"
+      ctx.shadowColor = "rgba(0, 0, 0, 0.5)"
+      ctx.shadowBlur = 10
+      ctx.shadowOffsetX = 2
+      ctx.shadowOffsetY = 2
 
-        canvas.width = width
-        canvas.height = height
+      // Título
+      ctx.font = "bold 80px serif"
+      ctx.fillText(tripTitle || "Mi Viaje", width / 2, 120)
 
-        // Dibujar el mapa
-        ctx.drawImage(mapCanvas, 0, 0, width, height)
+      // Fecha
+      ctx.font = "40px serif"
+      ctx.fillText(tripDate || "2025", width / 2, 180)
 
-        // Añadir elementos de texto
-        ctx.textAlign = "center"
-        ctx.fillStyle = "white"
-        ctx.shadowColor = "rgba(0, 0, 0, 0.5)"
-        ctx.shadowBlur = 10
-        ctx.shadowOffsetX = 2
-        ctx.shadowOffsetY = 2
+      // Sección inferior
+      const footerHeight = 200
+      ctx.shadowBlur = 0
+      ctx.shadowOffsetX = 0
+      ctx.shadowOffsetY = 0
 
-        // Título
-        ctx.font = "bold 80px serif"
-        ctx.fillText(tripTitle || "Mi Viaje", width / 2, 120)
+      ctx.fillStyle = "rgba(255, 251, 235, 0.9)"
+      ctx.fillRect(0, height - footerHeight, width, footerHeight)
 
-        // Fecha
-        ctx.font = "40px serif"
-        ctx.fillText(tripDate || "2025", width / 2, 180)
+      // Distancia
+      ctx.fillStyle = "#92400E"
+      ctx.font = "bold 32px sans-serif"
+      ctx.fillText(`${totalDistance} km recorridos`, width / 2, height - footerHeight + 50)
 
-        // Sección inferior
-        const footerHeight = 200
-        ctx.shadowBlur = 0
-        ctx.shadowOffsetX = 0
-        ctx.shadowOffsetY = 0
-
-        ctx.fillStyle = "rgba(255, 251, 235, 0.9)"
-        ctx.fillRect(0, height - footerHeight, width, footerHeight)
-
-        // Distancia
-        ctx.fillStyle = "#92400E"
-        ctx.font = "bold 32px sans-serif"
-        ctx.fillText(`${totalDistance} km recorridos`, width / 2, height - footerHeight + 50)
-
-        // Comentario
-        if (tripComment) {
-          ctx.font = "italic 28px serif"
-          ctx.fillStyle = "#78350F"
-          ctx.fillText(`"${tripComment}"`, width / 2, height - footerHeight + 100)
-        }
-
-        // Footer
-        ctx.font = "16px sans-serif"
-        ctx.fillStyle = "#B45309"
-        ctx.textAlign = "left"
-        ctx.fillText("travelprint.me", 40, height - 30)
-        ctx.textAlign = "right"
-        ctx.fillText("Mi recuerdo de viaje", width - 40, height - 30)
-
-        const dataUrl = canvas.toDataURL("image/png")
-        setGeneratedMap(dataUrl)
-        setShareUrl(null)
-      } catch (fallbackError) {
-        console.error("Error with canvas fallback:", fallbackError)
-        setMapError("No se pudo generar la estampita. Verifica tu conexión a internet.")
+      // Comentario
+      if (tripComment) {
+        ctx.font = "italic 28px serif"
+        ctx.fillStyle = "#78350F"
+        ctx.fillText(`"${tripComment}"`, width / 2, height - footerHeight + 100)
       }
+
+      // Footer
+      ctx.font = "16px sans-serif"
+      ctx.fillStyle = "#B45309"
+      ctx.textAlign = "left"
+      ctx.fillText("travelprint.me", 40, height - 30)
+      ctx.textAlign = "right"
+      ctx.fillText("Mi recuerdo de viaje", width - 40, height - 30)
+
+      // Convertir a URL de datos
+      const dataUrl = canvas.toDataURL("image/png")
+
+      // Subir a Cloudinary
+      const response = await fetch("/api/upload-to-cloudinary", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          imageUrl: dataUrl,
+          title: tripTitle || "Mi Viaje",
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Error al subir la imagen a Cloudinary")
+      }
+
+      const { url: cloudinaryUrl } = await response.json()
+
+      setGeneratedMap(cloudinaryUrl || dataUrl)
+      setShareUrl(cloudinaryUrl)
+    } catch (error) {
+      console.error("❌ Error al generar la estampita:", error)
+      setMapError("Error al generar la estampita. Intenta de nuevo.")
     } finally {
       setIsGenerating(false)
-    }
-  }
-
-  // Simular subida a Cloudinary
-  const uploadToCloudinary = async (imageUrl: string, title: string): Promise<string | null> => {
-    // En un entorno real, aquí se haría una llamada a la API para subir la imagen a Cloudinary
-    // Para esta simulación, simplemente devolvemos la URL original
-
-    try {
-      // Simulación de llamada a API
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      // En un entorno real, aquí procesaríamos la respuesta de Cloudinary
-      return imageUrl
-    } catch (error) {
-      console.error("Error al subir a Cloudinary:", error)
-      return null
     }
   }
 
@@ -851,6 +874,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
