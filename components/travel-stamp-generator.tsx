@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { MapPin, Download, X, Plus, Search } from "lucide-react"
+import { MapPin, Download, X, Plus, Search, Square, Maximize, AlignJustify } from "lucide-react"
 import { checkPurchaseFromURL } from "@/utils/lemonsqueezy-utils"
 import { verifyAndSavePremiumStatus, isPremiumUser } from "@/utils/premium-storage"
 import mapboxgl from "mapbox-gl"
@@ -24,6 +24,9 @@ interface Location {
   name: string
   coordinates: [number, number]
 }
+
+// Formatos disponibles
+type StampFormat = "square" | "rectangle" | "story"
 
 export default function TravelStampGenerator() {
   const mapContainer = useRef<HTMLDivElement>(null)
@@ -43,7 +46,10 @@ export default function TravelStampGenerator() {
   const [totalDistance, setTotalDistance] = useState(0)
   const [mapCenter, setMapCenter] = useState<[number, number]>([-70.6483, -33.4569]) // Santiago
   const [mapBounds, setMapBounds] = useState<mapboxgl.LngLatBounds | null>(null)
+  const [stampFormat, setStampFormat] = useState<StampFormat>("rectangle")
   const stampRef = useRef<HTMLDivElement>(null)
+  const [markerColor, setMarkerColor] = useState("#F97316") // Color naranja para los marcadores
+  const [routeColor, setRouteColor] = useState("#F97316") // Color naranja para la ruta
 
   // Verificar licencia en la URL
   useEffect(() => {
@@ -78,6 +84,13 @@ export default function TravelStampGenerator() {
       }
     }
   }, [])
+
+  // Actualizar el estilo del mapa cuando cambia
+  useEffect(() => {
+    if (map.current) {
+      map.current.setStyle(mapStyle)
+    }
+  }, [mapStyle])
 
   // Calcular distancia total
   const calculateTotalDistance = (locationList: Location[]) => {
@@ -128,7 +141,7 @@ export default function TravelStampGenerator() {
 
     if (map.current) {
       // Añadir marcador
-      new mapboxgl.Marker({ color: "#F97316" }).setLngLat(newLocation.coordinates).addTo(map.current)
+      new mapboxgl.Marker({ color: markerColor }).setLngLat(newLocation.coordinates).addTo(map.current)
 
       // Actualizar ruta
       if (locations.length > 0) {
@@ -156,7 +169,7 @@ export default function TravelStampGenerator() {
               "line-cap": "round",
             },
             paint: {
-              "line-color": "#F97316",
+              "line-color": routeColor,
               "line-width": 3,
             },
           })
@@ -181,6 +194,63 @@ export default function TravelStampGenerator() {
         maxZoom: 15,
       })
       setMapBounds(bounds)
+    }
+  }
+
+  // Eliminar ubicación
+  const removeLocation = (index: number) => {
+    const newLocations = [...locations]
+    newLocations.splice(index, 1)
+    setLocations(newLocations)
+    setTotalDistance(calculateTotalDistance(newLocations))
+
+    // Actualizar el mapa
+    if (map.current) {
+      // Eliminar todos los marcadores
+      const markers = document.querySelectorAll(".mapboxgl-marker")
+      markers.forEach((marker) => marker.remove())
+
+      // Añadir marcadores para las ubicaciones restantes
+      newLocations.forEach((loc) => {
+        new mapboxgl.Marker({ color: markerColor }).setLngLat(loc.coordinates).addTo(map.current!)
+      })
+
+      // Actualizar la ruta
+      if (newLocations.length > 1) {
+        const coordinates = newLocations.map((loc) => loc.coordinates)
+        const source = map.current.getSource("route") as mapboxgl.GeoJSONSource
+
+        source.setData({
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates,
+          },
+        })
+      } else if (map.current.getLayer("route")) {
+        // Si solo queda una ubicación o ninguna, eliminar la ruta
+        map.current.removeLayer("route")
+        map.current.removeSource("route")
+      }
+
+      // Ajustar la vista
+      if (newLocations.length > 0) {
+        const bounds = new mapboxgl.LngLatBounds()
+        newLocations.forEach((loc) => bounds.extend(loc.coordinates))
+        map.current.fitBounds(bounds, {
+          padding: { top: 50, bottom: 50, left: 50, right: 50 },
+          maxZoom: 15,
+        })
+        setMapBounds(bounds)
+      } else {
+        // Si no hay ubicaciones, volver a la vista predeterminada
+        map.current.flyTo({
+          center: mapCenter,
+          zoom: zoom[0],
+        })
+        setMapBounds(null)
+      }
     }
   }
 
@@ -228,6 +298,20 @@ export default function TravelStampGenerator() {
     document.body.removeChild(link)
   }
 
+  // Obtener la clase de aspecto según el formato
+  const getAspectRatioClass = () => {
+    switch (stampFormat) {
+      case "square":
+        return "aspect-square"
+      case "rectangle":
+        return "aspect-[4/3]"
+      case "story":
+        return "aspect-[9/16]"
+      default:
+        return "aspect-[4/3]"
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Panel de control */}
@@ -256,14 +340,23 @@ export default function TravelStampGenerator() {
           </div>
 
           <div>
-            <Label htmlFor="trip-comment">Descripción del viaje</Label>
+            <Label htmlFor="trip-comment">Descripción del viaje (máx. 150 caracteres)</Label>
             <Textarea
               id="trip-comment"
               value={tripComment}
-              onChange={(e) => setTripComment(e.target.value)}
+              onChange={(e) => {
+                // Limitar a 150 caracteres
+                if (e.target.value.length <= 150) {
+                  setTripComment(e.target.value)
+                }
+              }}
               placeholder="Describe tu experiencia..."
               className="mt-1 min-h-[100px]"
+              maxLength={150}
             />
+            <div className="flex justify-end mt-1">
+              <span className="text-xs text-muted-foreground">{tripComment.length}/150</span>
+            </div>
           </div>
 
           <div>
@@ -312,15 +405,7 @@ export default function TravelStampGenerator() {
                       <MapPin className="h-4 w-4 text-amber-500 mr-2" />
                       {loc.name}
                     </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        const newLocations = locations.filter((_, i) => i !== index)
-                        setLocations(newLocations)
-                        setTotalDistance(calculateTotalDistance(newLocations))
-                      }}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => removeLocation(index)}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -328,11 +413,44 @@ export default function TravelStampGenerator() {
               </div>
             </div>
           )}
+
+          <div>
+            <Label>Formato de estampita</Label>
+            <div className="grid grid-cols-3 gap-3 mt-2">
+              <div
+                className={`border rounded-lg p-3 cursor-pointer transition-all hover:bg-muted flex flex-col items-center
+                  ${stampFormat === "square" ? "bg-muted ring-2 ring-amber-500" : ""}`}
+                onClick={() => setStampFormat("square")}
+              >
+                <Square className="h-6 w-6 mb-1" />
+                <span className="text-sm font-medium">Cuadrado</span>
+              </div>
+              <div
+                className={`border rounded-lg p-3 cursor-pointer transition-all hover:bg-muted flex flex-col items-center
+                  ${stampFormat === "rectangle" ? "bg-muted ring-2 ring-amber-500" : ""}`}
+                onClick={() => setStampFormat("rectangle")}
+              >
+                <Maximize className="h-6 w-6 mb-1" />
+                <span className="text-sm font-medium">Rectangular</span>
+              </div>
+              <div
+                className={`border rounded-lg p-3 cursor-pointer transition-all hover:bg-muted flex flex-col items-center
+                  ${stampFormat === "story" ? "bg-muted ring-2 ring-amber-500" : ""}`}
+                onClick={() => setStampFormat("story")}
+              >
+                <AlignJustify className="h-6 w-6 mb-1" />
+                <span className="text-sm font-medium">Historia</span>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
       {/* Vista previa de la estampita */}
-      <div ref={stampRef} className="relative aspect-[4/3] rounded-3xl overflow-hidden bg-amber-50">
+      <div
+        ref={stampRef}
+        className={`relative ${getAspectRatioClass()} rounded-3xl overflow-hidden bg-amber-50 mx-auto max-w-2xl`}
+      >
         {/* Contenedor del mapa */}
         <div ref={mapContainer} className="absolute inset-0" />
 
@@ -387,6 +505,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
