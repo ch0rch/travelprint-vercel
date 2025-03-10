@@ -115,14 +115,19 @@ export default function AIStampPage() {
                     <p className="text-sm font-medium text-amber-800">Créditos</p>
                     <p className="text-2xl font-bold text-amber-600">{currentCredits}</p>
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={openLemonSqueezyCheckout}
-                    className="bg-gradient-to-r from-amber-500 to-amber-700"
-                  >
-                    <Coins className="h-4 w-4 mr-1" />
-                    Comprar
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      size="sm"
+                      onClick={openLemonSqueezyCheckout}
+                      className="bg-gradient-to-r from-amber-500 to-amber-700"
+                    >
+                      <Coins className="h-4 w-4 mr-1" />
+                      Comprar
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setShowActivateModal(true)}>
+                      Activar licencia
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -293,6 +298,8 @@ export default function AIStampPage() {
     </main>
   )
 }
+
+
 
 
 

@@ -7,10 +7,20 @@ const isBrowser = typeof window !== "undefined"
 
 // Función para obtener créditos actuales
 export function getCurrentCredits(): number {
-  if (!isBrowser) return 0
+  if (typeof window === "undefined") return 0
 
-  const credits = localStorage.getItem(CREDITS_KEY)
-  return credits ? Number.parseInt(credits, 10) : 0
+  try {
+    const credits = localStorage.getItem(CREDITS_KEY)
+    // Si no hay créditos almacenados, devolver 0
+    if (!credits) return 0
+
+    // Convertir a número y asegurarse de que sea un valor válido
+    const creditsNum = Number.parseInt(credits, 10)
+    return isNaN(creditsNum) ? 0 : creditsNum
+  } catch (error) {
+    console.error("Error al obtener créditos:", error)
+    return 0
+  }
 }
 
 // Función para usar créditos
@@ -115,6 +125,8 @@ export function updateCreditsFromLicense(credits: number): boolean {
     return false
   }
 }
+
+
 
 
 

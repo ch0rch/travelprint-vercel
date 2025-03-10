@@ -100,13 +100,22 @@ export default function AIIllustratedStamp({
   const [imageId, setImageId] = useState<string | null>(null)
 
   // Añadir estados para créditos
-  const [currentCredits, setCurrentCredits] = useState(getCurrentCredits())
+  const [currentCredits, setCurrentCredits] = useState(0)
   const [insufficientCredits, setInsufficientCredits] = useState(false)
 
   // Actualizar créditos al cargar el componente
   useEffect(() => {
-    setIsPremium(isPremiumUser())
-    setCurrentCredits(getCurrentCredits())
+    const updateCreditsAndPremium = () => {
+      setIsPremium(isPremiumUser())
+      setCurrentCredits(getCurrentCredits())
+    }
+
+    // Actualizar al montar el componente
+    updateCreditsAndPremium()
+
+    // Actualizar cuando la ventana recibe el foco
+    window.addEventListener("focus", updateCreditsAndPremium)
+    return () => window.removeEventListener("focus", updateCreditsAndPremium)
   }, [])
 
   // Función para generar la estampita ilustrada
@@ -116,15 +125,21 @@ export default function AIIllustratedStamp({
       return
     }
 
+    // Actualizar el estado premium y créditos antes de verificar
+    const isPremiumNow = isPremiumUser()
+    const currentCreditsNow = getCurrentCredits()
+
+    setIsPremium(isPremiumNow)
+    setCurrentCredits(currentCreditsNow)
+
     // Bloquear completamente la generación para usuarios no premium
-    if (!isPremium) {
+    if (!isPremiumNow) {
       onOpenPremium()
       return
     }
 
     // Verificar si hay suficientes créditos
-    const credits = getCurrentCredits()
-    if (credits < 1) {
+    if (currentCreditsNow < 1) {
       setInsufficientCredits(true)
       return
     }
@@ -309,9 +324,15 @@ export default function AIIllustratedStamp({
 
   // Función para regenerar con los mismos parámetros
   const regenerateIllustration = async () => {
+    // Actualizar el estado premium y créditos antes de verificar
+    const isPremiumNow = isPremiumUser()
+    const currentCreditsNow = getCurrentCredits()
+
+    setIsPremium(isPremiumNow)
+    setCurrentCredits(currentCreditsNow)
+
     // Verificar si hay suficientes créditos
-    const credits = getCurrentCredits()
-    if (credits < 1) {
+    if (currentCreditsNow < 1) {
       setInsufficientCredits(true)
       return
     }
@@ -616,6 +637,8 @@ export default function AIIllustratedStamp({
     </Card>
   )
 }
+
+
 
 
 

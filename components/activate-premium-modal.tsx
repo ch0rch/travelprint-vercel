@@ -77,16 +77,46 @@ export default function ActivatePremiumModal({ onClose }: ActivatePremiumModalPr
           <DialogTitle>Activar Cuenta Premium</DialogTitle>
         </DialogHeader>
         <div className="py-4">
-          {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
-          {success && <div className="text-green-500 text-sm mb-4">Licencia activada con éxito! Recargando...</div>}
-          <Input
-            disabled={isVerifying || success}
-            type="text"
-            placeholder="Ingresa tu clave de licencia"
-            value={licenseKey}
-            onChange={(e) => setLicenseKey(e.target.value)}
-            className="mb-4"
-          />
+          {error && (
+            <div className="text-red-500 text-sm mb-4 p-2 bg-red-50 rounded border border-red-200">{error}</div>
+          )}
+          {success && (
+            <div className="text-green-500 text-sm mb-4 p-2 bg-green-50 rounded border border-green-200">
+              ¡Licencia activada con éxito! Recargando...
+            </div>
+          )}
+
+          <div className="mb-4">
+            <p className="text-sm text-amber-700 mb-2">
+              Ingresa la clave de licencia que recibiste por correo electrónico después de tu compra.
+            </p>
+            <Input
+              disabled={isVerifying || success}
+              type="text"
+              placeholder="Ingresa tu clave de licencia"
+              value={licenseKey}
+              onChange={(e) => setLicenseKey(e.target.value)}
+              className="mb-2"
+            />
+            <p className="text-xs text-muted-foreground">Ejemplo: LS-xxxx-xxxx-xxxx-xxxx</p>
+          </div>
+
+          <div className="bg-amber-50 p-3 rounded-lg border border-amber-200 mb-4">
+            <h4 className="text-sm font-medium text-amber-800 mb-1">¿No tienes una licencia?</h4>
+            <p className="text-xs text-amber-700 mb-2">
+              Puedes comprar 10 créditos por solo $10 y recibir tu clave de licencia al instante.
+            </p>
+            <Button
+              size="sm"
+              onClick={() => {
+                onClose()
+                // Aquí puedes añadir la lógica para abrir el checkout de LemonSqueezy
+              }}
+              className="w-full bg-gradient-to-r from-amber-500 to-amber-700"
+            >
+              Comprar 10 créditos
+            </Button>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isVerifying}>
@@ -104,6 +134,8 @@ export default function ActivatePremiumModal({ onClose }: ActivatePremiumModalPr
     </Dialog>
   )
 }
+
+
 
 
 
