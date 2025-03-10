@@ -17,7 +17,9 @@ import html2canvas from "html2canvas"
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
 // Inicializar Mapbox
-mapboxgl.accessToken = MAPBOX_TOKEN || ""
+if (MAPBOX_TOKEN) {
+  mapboxgl.accessToken = MAPBOX_TOKEN
+}
 
 interface Location {
   name: string
@@ -30,8 +32,9 @@ type StampFormat = "square" | "rectangle" | "story"
 export default function TravelStampGenerator() {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
-  const [mapStyle, setMapStyle] = useState("mapbox://styles/mapbox/satellite-streets-v12")
-  const [zoom, setZoom] = useState([12])
+  const markersRef = useRef<mapboxgl.Marker[]>([])
+  const [mapStyle, setMapStyle] = useState("mapbox://styles/mapbox/satellite-v9")
+  const [zoom, setZoom] = useState(4)
   const [location, setLocation] = useState("")
   const [locations, setLocations] = useState<Location[]>([])
   const [generatedMap, setGeneratedMap] = useState<string | null>(null)
@@ -62,19 +65,29 @@ export default function TravelStampGenerator() {
 
   // Inicializar mapa
   useEffect(() => {
-    if (map.current) return
-    if (!mapContainer.current) return
+    if (!mapContainer.current || !MAPBOX_TOKEN) return
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: mapStyle,
-      center: mapCenter,
-      zoom: zoom[0],
-      attributionControl: false,
-    })
+    if (!map.current) {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: mapStyle,
+        center: mapCenter,
+        zoom: zoom,
+        attributionControl: false,
+        interactive: true, // Permitir interacción con el mapa
+      })
 
-    map.current.addControl(new mapboxgl.NavigationControl(), "top-right")
-    map.current.addControl(new mapboxgl.ScaleControl(), "bottom-left")
+      // Añadir controles de navegación
+      map.current.addControl(new mapboxgl.NavigationControl(), "top-right")
+
+      // Esperar a que el mapa cargue
+      map.current.on("load", () => {
+        // Añadir fuente y capa para la ruta si hay ubicaciones
+        if (locations.length > 1) {
+          updateRoute()
+        }
+      })
+    }
 
     return () => {
       if (map.current) {
@@ -92,47 +105,91 @@ export default function TravelStampGenerator() {
   }, [mapStyle])
 
   // Calcular distancia total usando la fórmula de Haversine
+  const calculateHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371 // Radio de la Tierra en km
+    const dLat = ((lat2 - lat1) * Math.PI) / 180
+    const dLon = ((lon2 - lon1) * Math.PI) / 180
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
+  }
+
   const calculateTotalDistance = (locationList: Location[]) => {
     if (locationList.length < 2) return 0
-
     let total = 0
     for (let i = 1; i < locationList.length; i++) {
       total += calculateHaversineDistance(
-        locationList[i - 1].coordinates[1], // lat1
-        locationList[i - 1].coordinates[0], // lon1
-        locationList[i].coordinates[1], // lat2
-        locationList[i].coordinates[0], // lon2
+        locationList[i - 1].coordinates[1],
+        locationList[i - 1].coordinates[0],
+        locationList[i].coordinates[1],
+        locationList[i].coordinates[0],
       )
     }
     return Math.round(total)
   }
 
-  // Fórmula de Haversine para calcular distancia entre dos puntos en la Tierra
-  const calculateHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371 // Radio de la Tierra en km
-    const dLat = toRad(lat2 - lat1)
-    const dLon = toRad(lon2 - lon1)
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    const distance = R * c
-    return distance
-  }
+  // Actualizar la ruta en el mapa
+  const updateRoute = () => {
+    if (!map.current || locations.length < 2) return
 
-  // Convertir grados a radianes
-  const toRad = (value: number) => {
-    return (value * Math.PI) / 180
+    const coordinates = locations.map((loc) => loc.coordinates)
+
+    // Eliminar la capa y fuente existentes si existen
+    if (map.current.getLayer("route")) {
+      map.current.removeLayer("route")
+    }
+    if (map.current.getSource("route")) {
+      map.current.removeSource("route")
+    }
+
+    // Añadir nueva fuente y capa
+    map.current.addSource("route", {
+      type: "geojson",
+      data: {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "LineString",
+          coordinates: coordinates,
+        },
+      },
+    })
+
+    map.current.addLayer({
+      id: "route",
+      type: "line",
+      source: "route",
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+      },
+      paint: {
+        "line-color": routeColor,
+        "line-width": 3,
+      },
+    })
+
+    // Ajustar la vista para mostrar toda la ruta
+    const bounds = new mapboxgl.LngLatBounds()
+    coordinates.forEach((coord) => bounds.extend(coord))
+    map.current.fitBounds(bounds, {
+      padding: { top: 50, bottom: 50, left: 50, right: 50 },
+      maxZoom: 15,
+    })
   }
 
   // Buscar ubicación
   const searchLocation = async () => {
-    if (!location.trim()) return
+    if (!location.trim() || !MAPBOX_TOKEN) return
     setIsSearching(true)
 
     try {
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(location)}.json?access_token=${MAPBOX_TOKEN}&limit=5`,
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+          location,
+        )}.json?access_token=${MAPBOX_TOKEN}&limit=5`,
       )
 
       if (!response.ok) throw new Error("Error en la búsqueda")
@@ -148,10 +205,16 @@ export default function TravelStampGenerator() {
 
   // Añadir ubicación
   const addLocation = (result: any) => {
+    if (!map.current) return
+
     const newLocation = {
       name: result.place_name,
       coordinates: result.center as [number, number],
     }
+
+    // Crear y guardar el marcador
+    const marker = new mapboxgl.Marker({ color: markerColor }).setLngLat(newLocation.coordinates).addTo(map.current)
+    markersRef.current.push(marker)
 
     const newLocations = [...locations, newLocation]
     setLocations(newLocations)
@@ -159,146 +222,84 @@ export default function TravelStampGenerator() {
     setSearchResults([])
     setLocation("")
 
-    if (map.current) {
-      // Añadir marcador
-      new mapboxgl.Marker({ color: markerColor }).setLngLat(newLocation.coordinates).addTo(map.current)
-
-      // Actualizar ruta
-      if (locations.length > 0) {
-        const coordinates = newLocations.map((loc) => loc.coordinates)
-
-        if (!map.current.getSource("route")) {
-          map.current.addSource("route", {
-            type: "geojson",
-            data: {
-              type: "Feature",
-              properties: {},
-              geometry: {
-                type: "LineString",
-                coordinates,
-              },
-            },
-          })
-
-          map.current.addLayer({
-            id: "route",
-            type: "line",
-            source: "route",
-            layout: {
-              "line-join": "round",
-              "line-cap": "round",
-            },
-            paint: {
-              "line-color": routeColor,
-              "line-width": 3,
-            },
-          })
-        } else {
-          const source = map.current.getSource("route") as mapboxgl.GeoJSONSource
-          source.setData({
-            type: "Feature",
-            properties: {},
-            geometry: {
-              type: "LineString",
-              coordinates,
-            },
-          })
-        }
-      }
-
-      // Ajustar vista
-      const bounds = new mapboxgl.LngLatBounds()
-      newLocations.forEach((loc) => bounds.extend(loc.coordinates))
-      map.current.fitBounds(bounds, {
-        padding: { top: 50, bottom: 50, left: 50, right: 50 },
-        maxZoom: 15,
+    // Actualizar la ruta si hay más de una ubicación
+    if (newLocations.length > 1) {
+      updateRoute()
+    } else {
+      // Si es la primera ubicación, centrar el mapa en ella
+      map.current.flyTo({
+        center: newLocation.coordinates,
+        zoom: 10,
       })
-      setMapBounds(bounds)
     }
   }
 
   // Eliminar ubicación
   const removeLocation = (index: number) => {
+    // Eliminar el marcador correspondiente
+    if (markersRef.current[index]) {
+      markersRef.current[index].remove()
+      markersRef.current.splice(index, 1)
+    }
+
     const newLocations = [...locations]
     newLocations.splice(index, 1)
     setLocations(newLocations)
     setTotalDistance(calculateTotalDistance(newLocations))
 
-    // Actualizar el mapa
-    if (map.current) {
-      // Eliminar todos los marcadores
-      const markers = document.querySelectorAll(".mapboxgl-marker")
-      markers.forEach((marker) => marker.remove())
-
-      // Añadir marcadores para las ubicaciones restantes
-      newLocations.forEach((loc) => {
-        new mapboxgl.Marker({ color: markerColor }).setLngLat(loc.coordinates).addTo(map.current!)
-      })
-
-      // Actualizar la ruta
-      if (newLocations.length > 1) {
-        const coordinates = newLocations.map((loc) => loc.coordinates)
-        const source = map.current.getSource("route") as mapboxgl.GeoJSONSource
-
-        source.setData({
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "LineString",
-            coordinates,
-          },
-        })
-      } else if (map.current.getLayer("route")) {
-        // Si solo queda una ubicación o ninguna, eliminar la ruta
+    // Actualizar la ruta
+    if (newLocations.length > 1) {
+      updateRoute()
+    } else if (map.current) {
+      // Si solo queda una ubicación o ninguna, limpiar la ruta
+      if (map.current.getLayer("route")) {
         map.current.removeLayer("route")
         map.current.removeSource("route")
       }
 
-      // Ajustar la vista
-      if (newLocations.length > 0) {
-        const bounds = new mapboxgl.LngLatBounds()
-        newLocations.forEach((loc) => bounds.extend(loc.coordinates))
-        map.current.fitBounds(bounds, {
-          padding: { top: 50, bottom: 50, left: 50, right: 50 },
-          maxZoom: 15,
+      // Si queda una ubicación, centrar en ella
+      if (newLocations.length === 1) {
+        map.current.flyTo({
+          center: newLocations[0].coordinates,
+          zoom: 10,
         })
-        setMapBounds(bounds)
       } else {
-        // Si no hay ubicaciones, volver a la vista predeterminada
+        // Si no quedan ubicaciones, volver a la vista inicial
         map.current.flyTo({
           center: mapCenter,
-          zoom: zoom[0],
+          zoom: zoom,
         })
-        setMapBounds(null)
       }
     }
   }
 
   // Generar estampita
   const generateStamp = async () => {
-    if (!stampRef.current) return
+    if (!stampRef.current || !map.current) return
     setIsGenerating(true)
 
     try {
       // Asegurar que el mapa está en posición
-      if (map.current && mapBounds) {
-        map.current.fitBounds(mapBounds, {
+      if (locations.length > 1) {
+        const bounds = new mapboxgl.LngLatBounds()
+        locations.forEach((loc) => bounds.extend(loc.coordinates))
+        map.current.fitBounds(bounds, {
           padding: { top: 50, bottom: 50, left: 50, right: 50 },
           maxZoom: 15,
         })
-
-        // Esperar a que el mapa se renderice
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        const canvas = await html2canvas(stampRef.current, {
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: null,
-          scale: 2, // Mayor calidad
-        })
-
-        setGeneratedMap(canvas.toDataURL("image/png"))
       }
+
+      // Esperar a que el mapa se renderice
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      const canvas = await html2canvas(stampRef.current, {
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+        scale: 2, // Mayor calidad
+      })
+
+      setGeneratedMap(canvas.toDataURL("image/png"))
     } catch (error) {
       console.error("Error:", error)
     } finally {
@@ -365,7 +366,6 @@ export default function TravelStampGenerator() {
               id="trip-comment"
               value={tripComment}
               onChange={(e) => {
-                // Limitar a 150 caracteres
                 if (e.target.value.length <= 150) {
                   setTripComment(e.target.value)
                 }
@@ -469,32 +469,48 @@ export default function TravelStampGenerator() {
       {/* Vista previa de la estampita */}
       <div
         ref={stampRef}
-        className={`relative ${getAspectRatioClass()} rounded-3xl overflow-hidden bg-amber-50 mx-auto max-w-2xl`}
+        className={`relative ${getAspectRatioClass()} rounded-3xl overflow-hidden bg-amber-50 mx-auto max-w-2xl shadow-xl`}
       >
         {/* Contenedor del mapa */}
         <div ref={mapContainer} className="absolute inset-0" />
 
         {/* Overlay con título y fecha */}
-        <div className="absolute inset-0 flex flex-col items-center justify-between p-8 text-white">
+        <div className="absolute inset-0 flex flex-col items-center justify-between p-8">
           <div className="text-center">
-            <h1 className="text-4xl font-serif font-bold mb-2 drop-shadow-lg">{tripTitle || "Mi Viaje"}</h1>
-            <p className="text-2xl font-serif drop-shadow-lg">{tripDate || "2025"}</p>
+            <h1
+              className="text-4xl md:text-5xl font-serif font-bold mb-2"
+              style={{
+                color: "white",
+                textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
+              }}
+            >
+              {tripTitle || "Mi Viaje"}
+            </h1>
+            <p
+              className="text-2xl md:text-3xl font-serif"
+              style={{
+                color: "white",
+                textShadow: "2px 2px 4px rgba(0,0,0,0.5)",
+              }}
+            >
+              {tripDate || "2025"}
+            </p>
           </div>
         </div>
 
         {/* Sección inferior con distancia y comentario */}
         <div className="absolute bottom-0 inset-x-0 bg-[rgba(255,251,235,0.9)] p-6 space-y-4">
           <div className="text-center">
-            <span className="inline-block px-4 py-1 rounded-full bg-amber-100 text-amber-800 font-medium">
+            <span className="inline-block px-4 py-1 rounded-full bg-amber-100 text-amber-800 font-medium text-lg">
               {totalDistance} km recorridos
             </span>
           </div>
 
           {tripComment && (
             <div className="relative text-center px-8">
-              <span className="absolute left-0 top-0 text-4xl text-amber-800">"</span>
-              <p className="text-lg text-amber-900 font-serif italic">{tripComment}</p>
-              <span className="absolute right-0 bottom-0 text-4xl text-amber-800">"</span>
+              <span className="absolute left-0 top-0 text-4xl text-amber-800 font-serif">"</span>
+              <p className="text-lg md:text-xl text-amber-900 font-serif italic leading-relaxed">{tripComment}</p>
+              <span className="absolute right-0 bottom-0 text-4xl text-amber-800 font-serif">"</span>
             </div>
           )}
 
@@ -525,6 +541,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
