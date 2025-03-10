@@ -104,22 +104,29 @@ export default function TravelStampGenerator() {
           setMapError(null)
           map.current = newMap
 
-          // Add navigation controls
+          // Add navigation controls after map is loaded
           newMap.addControl(new mapboxgl.NavigationControl(), "top-right")
 
-          // Add click handler for adding locations
-          newMap.on("click", (e) => {
-            addLocationByCoordinates(e.lngLat.lng, e.lngLat.lat)
-          })
+          // Wait for style to be fully loaded before adding markers and routes
+          if (!newMap.isStyleLoaded()) {
+            newMap.once("style.load", () => {
+              // Re-add existing markers and routes
+              locations.forEach((location) => {
+                const marker = new mapboxgl.Marker({ color: "#F97316" }).setLngLat(location.coordinates).addTo(newMap)
+                markersRef.current.push(marker)
+              })
 
-          // If there are existing locations, add them to the map
-          if (locations.length > 0) {
+              if (locations.length > 1) {
+                updateRoute()
+              }
+            })
+          } else {
+            // Style already loaded, add markers and routes directly
             locations.forEach((location) => {
               const marker = new mapboxgl.Marker({ color: "#F97316" }).setLngLat(location.coordinates).addTo(newMap)
               markersRef.current.push(marker)
             })
 
-            // If there are multiple locations, draw the route
             if (locations.length > 1) {
               updateRoute()
             }
@@ -157,7 +164,23 @@ export default function TravelStampGenerator() {
 
         // Re-add markers
         locations.forEach((location) => {
-          const marker = new mapboxgl.Marker({ color: "#F97316" }).setLngLat(location.coordinates).addTo(map.current!)
+          const marker = new mapboxgl.Marker({
+            color: "#F97316",
+            draggable: false,
+            scale: 1,
+          })
+            .setLngLat(location.coordinates)
+            .addTo(map.current!)
+
+          // Add popup with location name
+          new mapboxgl.Popup({
+            offset: 25,
+            closeButton: false,
+          })
+            .setHTML(`<div class="text-sm font-medium">${location.name}</div>`)
+            .setLngLat(location.coordinates)
+            .addTo(map.current!)
+
           markersRef.current.push(marker)
         })
 
@@ -192,25 +215,46 @@ export default function TravelStampGenerator() {
         coordinates: [lng, lat] as [number, number],
       }
 
-      // Añadir marcador
-      const marker = new mapboxgl.Marker({ color: "#F97316" }).setLngLat(newLocation.coordinates).addTo(map.current)
-      markersRef.current.push(marker)
+      // Create and add the marker
+      if (map.current) {
+        const marker = new mapboxgl.Marker({
+          color: "#F97316",
+          draggable: false,
+          scale: 1,
+        })
+          .setLngLat(newLocation.coordinates)
+          .addTo(map.current)
 
-      // Actualizar estado
+        // Add popup with location name
+        new mapboxgl.Popup({
+          offset: 25,
+          closeButton: false,
+        })
+          .setHTML(`<div class="text-sm font-medium">${placeName}</div>`)
+          .setLngLat(newLocation.coordinates)
+          .addTo(map.current)
+
+        markersRef.current.push(marker)
+      }
+
+      // Update locations state
       const newLocations = [...locations, newLocation]
       setLocations(newLocations)
       setTotalDistance(calculateTotalDistance(newLocations))
 
-      // Actualizar ruta si hay más de una ubicación
+      // Update route if there are multiple locations
       if (newLocations.length > 1) {
         updateRoute()
       }
 
-      // Centrar el mapa en la nueva ubicación
-      map.current.flyTo({
-        center: newLocation.coordinates,
-        zoom: 10,
-      })
+      // Center map on new location
+      if (map.current) {
+        map.current.flyTo({
+          center: newLocation.coordinates,
+          zoom: 10,
+          duration: 1000,
+        })
+      }
     } catch (error) {
       console.error("❌ Error al añadir ubicación:", error)
     }
@@ -248,7 +292,15 @@ export default function TravelStampGenerator() {
     try {
       const coordinates = locations.map((loc) => loc.coordinates)
 
-      // Wait for style to load if needed
+      // Remove existing route if it exists
+      if (map.current.getLayer("route")) {
+        map.current.removeLayer("route")
+      }
+      if (map.current.getSource("route")) {
+        map.current.removeSource("route")
+      }
+
+      // Wait for style to be loaded
       if (!map.current.isStyleLoaded()) {
         map.current.once("style.load", () => {
           addRouteToMap(coordinates)
@@ -256,7 +308,34 @@ export default function TravelStampGenerator() {
         return
       }
 
-      addRouteToMap(coordinates)
+      // Add the route source and layer
+      map.current.addSource("route", {
+        type: "geojson",
+        data: {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates: coordinates,
+          },
+        },
+      })
+
+      map.current.addLayer({
+        id: "route",
+        type: "line",
+        source: "route",
+        layout: {
+          visibility: "visible",
+          "line-join": "round",
+          "line-cap": "round",
+        },
+        paint: {
+          "line-color": "#F97316",
+          "line-width": 4,
+          "line-opacity": 0.8,
+        },
+      })
 
       // Fit map to show all markers
       const bounds = new mapboxgl.LngLatBounds()
@@ -264,6 +343,7 @@ export default function TravelStampGenerator() {
       map.current.fitBounds(bounds, {
         padding: { top: 50, bottom: 50, left: 50, right: 50 },
         maxZoom: 15,
+        duration: 1000,
       })
     } catch (error) {
       console.error("❌ Error al actualizar la ruta:", error)
@@ -884,6 +964,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
