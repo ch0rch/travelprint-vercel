@@ -77,28 +77,18 @@ export default function TravelStampGenerator() {
     if (!MAPBOX_TOKEN) return null
 
     try {
-      console.log(`🧭 Obteniendo ruta entre [${start}] y [${end}]`)
-      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${start[0]},${start[1]};${end[0]},${end[1]}?steps=false&geometries=geojson&access_token=${MAPBOX_TOKEN}`
+      const coordinates = `${start[0]},${start[1]};${end[0]},${end[1]}`
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinates}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`
 
       const response = await fetch(url)
-
-      if (!response.ok) {
-        console.warn(`⚠️ Error en API de rutas: ${response.status} ${response.statusText}`)
-        return null
-      }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
 
       const data = await response.json()
+      if (!data.routes?.[0]) throw new Error("No route found")
 
-      if (!data.routes || data.routes.length === 0) {
-        console.warn("⚠️ No se encontró una ruta entre los puntos")
-        return null
-      }
-
-      console.log(`✅ Ruta obtenida con ${data.routes[0].geometry.coordinates.length} puntos`)
       return data.routes[0].geometry
     } catch (error) {
-      console.error("❌ Error al obtener la ruta:", error)
-      setDebugInfo((prev) => prev + "\nError al obtener ruta: " + (error as Error).message)
+      console.error("Error getting route:", error)
       return null
     }
   }
@@ -124,67 +114,26 @@ export default function TravelStampGenerator() {
         }
       }
 
-      // Verificar si el estilo está cargado
+      // Esperar a que el estilo esté cargado
       if (!map.current.isStyleLoaded()) {
-        console.log("⏳ Esperando a que el estilo se cargue completamente...")
-        map.current.once("style.load", async () => {
-          console.log("✅ Estilo cargado, añadiendo ruta ahora")
-          await addRoutes()
-        })
-        return
-      }
-
-      await addRoutes()
-
-      // Ajustar la vista para mostrar toda la ruta
-      if (locations.length > 0) {
-        const bounds = new mapboxgl.LngLatBounds()
-        locations.forEach((loc) => bounds.extend(loc.coordinates))
-        map.current.fitBounds(bounds, {
-          padding: { top: 50, bottom: 50, left: 50, right: 50 },
-          maxZoom: 15,
+        await new Promise((resolve) => {
+          map.current!.once("style.load", resolve)
         })
       }
-    } catch (error) {
-      console.error("❌ Error al actualizar la ruta:", error)
-      setDebugInfo((prev) => prev + "\nError al actualizar ruta: " + (error as Error).message)
-    } finally {
-      setIsRouteFetching(false)
-    }
-  }, [locations])
 
-  // Función para añadir rutas entre todos los puntos
-  const addRoutes = async () => {
-    if (!map.current || locations.length < 2) return
+      // Añadir nuevas rutas
+      let totalDist = 0
+      for (let i = 0; i < locations.length - 1; i++) {
+        const start = locations[i].coordinates
+        const end = locations[i + 1].coordinates
 
-    let totalDist = 0
+        const routeGeometry = await getRoute(start, end)
+        if (!routeGeometry) continue
 
-    // Para cada par de puntos consecutivos
-    for (let i = 0; i < locations.length - 1; i++) {
-      const start = locations[i].coordinates
-      const end = locations[i + 1].coordinates
-      const sourceId = `route-source-${i + 1}`
-      const layerId = `route-${i + 1}`
+        const sourceId = `route-source-${i + 1}`
+        const layerId = `route-${i + 1}`
 
-      console.log(`🛣️ Creando ruta ${i + 1} entre [${start}] y [${end}]`)
-
-      try {
-        // Intentar obtener la ruta real entre los puntos con la API de Directions
-        let routeGeometry = await getRoute(start, end)
-
-        if (!routeGeometry) {
-          console.log(`⚠️ No se pudo obtener ruta para segmento ${i + 1}, usando línea recta`)
-          routeGeometry = {
-            type: "LineString",
-            coordinates: [start, end],
-          }
-        }
-
-        // Calcular distancia
-        const dist = calculateDistance(start[1], start[0], end[1], end[0])
-        totalDist += dist
-
-        // Añadir la fuente de la ruta
+        // Añadir fuente
         map.current.addSource(sourceId, {
           type: "geojson",
           data: {
@@ -194,7 +143,7 @@ export default function TravelStampGenerator() {
           },
         })
 
-        // Añadir la capa de la ruta
+        // Añadir capa de ruta
         map.current.addLayer({
           id: layerId,
           type: "line",
@@ -210,16 +159,27 @@ export default function TravelStampGenerator() {
           },
         })
 
-        console.log(`✅ Ruta ${i + 1} añadida correctamente`)
-      } catch (error) {
-        console.error(`❌ Error al añadir ruta ${i + 1}:`, error)
-        setDebugInfo((prev) => prev + `\nError en ruta ${i + 1}: ` + (error as Error).message)
+        // Calcular distancia
+        const dist = calculateDistance(start[1], start[0], end[1], end[0])
+        totalDist += dist
       }
-    }
 
-    setTotalDistance(Math.round(totalDist))
-    console.log(`✅ Total ${locations.length - 1} rutas añadidas. Distancia: ${Math.round(totalDist)} km`)
-  }
+      setTotalDistance(Math.round(totalDist))
+
+      // Ajustar la vista para mostrar toda la ruta
+      const bounds = new mapboxgl.LngLatBounds()
+      locations.forEach((loc) => bounds.extend(loc.coordinates))
+      map.current.fitBounds(bounds, {
+        padding: { top: 50, bottom: 50, left: 50, right: 50 },
+        maxZoom: 15,
+      })
+    } catch (error) {
+      console.error("❌ Error al actualizar la ruta:", error)
+      setDebugInfo((prev) => prev + "\nError al actualizar ruta: " + error)
+    } finally {
+      setIsRouteFetching(false)
+    }
+  }, [locations])
 
   // Función para añadir marcadores
   const addMarkers = useCallback(() => {
@@ -293,7 +253,7 @@ export default function TravelStampGenerator() {
       console.log("✅ Marcadores añadidos:", markersRef.current.length)
     } catch (error) {
       console.error("❌ Error al añadir marcadores:", error)
-      setDebugInfo((prev) => prev + "\nError al añadir marcadores: " + (error as Error).message)
+      setDebugInfo((prev) => prev + "\nError al añadir marcadores: " + error)
     }
   }, [locations])
 
@@ -307,77 +267,57 @@ export default function TravelStampGenerator() {
     try {
       console.log("🗺️ Inicializando mapa con token:", MAPBOX_TOKEN.substring(0, 5) + "...")
 
-      if (!map.current) {
-        const newMap = new mapboxgl.Map({
-          container: mapContainer.current,
-          style: `mapbox://styles/mapbox/${mapStyle}`,
-          center: mapCenter,
-          zoom: zoom,
-          attributionControl: true,
-          preserveDrawingBuffer: true,
-        })
+      if (map.current) return // Evitar reinicialización
 
+      const newMap = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: `mapbox://styles/mapbox/${mapStyle}`,
+        center: mapCenter,
+        zoom: zoom,
+        preserveDrawingBuffer: true,
+      })
+
+      // Mejorar el manejo de eventos del mapa
+      newMap.on("load", () => {
+        console.log("✅ Mapa cargado")
+        setIsMapLoaded(true)
         map.current = newMap
 
-        // Add this event for debugging map load issues
-        newMap.on("styledata", () => {
-          console.log("🎨 Estilo de mapa cargado:", newMap.isStyleLoaded())
-        })
+        // Añadir controles después de que el mapa esté cargado
+        newMap.addControl(new mapboxgl.NavigationControl(), "top-right")
 
-        // Add a better error handler for the map load
-        newMap.on("error", (e) => {
-          console.error("❌ Error en el mapa:", e)
-          setMapError(`Error al cargar el mapa: ${e.error?.message || "Error desconocido"}`)
-          setDebugInfo((prev) => prev + "\nError del mapa: " + (e.error?.message || JSON.stringify(e)))
-        })
+        // Recargar marcadores y rutas si existen
+        if (locations.length > 0) {
+          setTimeout(() => {
+            addMarkers()
+            if (locations.length > 1) updateRoute()
+          }, 1000)
+        }
+      })
 
-        // Manejar eventos del mapa
-        newMap.on("load", () => {
-          console.log("✅ Mapa cargado correctamente")
-          setIsMapLoaded(true)
-          setMapError(null)
-          map.current = newMap
+      // Mejorar el manejo de errores
+      newMap.on("error", (e) => {
+        console.error("Error en el mapa:", e)
+        setMapError(`Error: ${e.error?.message || "Error desconocido"}`)
+      })
 
-          // Añadir controles de navegación
-          newMap.addControl(new mapboxgl.NavigationControl(), "top-right")
+      // Mejorar el manejo de clics en el mapa
+      newMap.on("click", (e) => {
+        const { lng, lat } = e.lngLat
+        addLocationByCoordinates(lng, lat)
+      })
 
-          // Añadir marcadores existentes
-          if (locations.length > 0) {
-            setTimeout(() => {
-              addMarkers()
-              if (locations.length > 1) {
-                updateRoute()
-              }
-            }, 500)
-          }
+      map.current = newMap
 
-          // Añadir manejador de clics
-          newMap.on("click", (e) => {
-            console.log("🖱️ Clic en el mapa:", e.lngLat)
-            addLocationByCoordinates(e.lngLat.lng, e.lngLat.lat)
-          })
-        })
-
-        newMap.on("error", (e) => {
-          console.error("❌ Error en el mapa:", e)
-          setMapError(`Error al cargar el mapa: ${e.error?.message || "Error desconocido"}`)
-          setDebugInfo((prev) => prev + "\nError del mapa: " + e.error?.message)
-        })
-
-        map.current = newMap
+      return () => {
+        if (map.current) {
+          map.current.remove()
+          map.current = null
+        }
       }
     } catch (error) {
-      console.error("❌ Error al inicializar el mapa:", error)
-      setMapError("Error al inicializar el mapa. Verifica tu conexión a internet y el token de Mapbox.")
-      setDebugInfo((prev) => prev + "\nError de inicialización: " + (error as Error).message)
-    }
-
-    // Cleanup
-    return () => {
-      if (map.current) {
-        map.current.remove()
-        map.current = null
-      }
+      console.error("Error al inicializar el mapa:", error)
+      setMapError("Error al inicializar el mapa")
     }
   }, [])
 
@@ -404,7 +344,7 @@ export default function TravelStampGenerator() {
     } catch (error) {
       console.error("❌ Error al cambiar el estilo del mapa:", error)
       setMapError("Error al cambiar el estilo del mapa. Intenta recargar la página.")
-      setDebugInfo((prev) => prev + "\nError al cambiar estilo: " + (error as Error).message)
+      setDebugInfo((prev) => prev + "\nError al cambiar estilo: " + error)
     }
   }, [mapStyle, addMarkers, updateRoute])
 
@@ -452,7 +392,7 @@ export default function TravelStampGenerator() {
       }, 100)
     } catch (error) {
       console.error("❌ Error al añadir ubicación:", error)
-      setDebugInfo((prev) => prev + "\nError al añadir ubicación: " + (error as Error).message)
+      setDebugInfo((prev) => prev + "\nError al añadir ubicación: " + error)
     }
   }
 
@@ -502,7 +442,7 @@ export default function TravelStampGenerator() {
       console.log("✅ Resultados encontrados:", data.features?.length || 0)
     } catch (error) {
       console.error("❌ Error en la búsqueda:", error)
-      setDebugInfo((prev) => prev + "\nError en búsqueda: " + (error as Error).message)
+      setDebugInfo((prev) => prev + "\nError en búsqueda: " + error)
     } finally {
       setIsSearching(false)
     }
@@ -585,9 +525,7 @@ export default function TravelStampGenerator() {
     setMapError(null)
 
     try {
-      console.log("🖼️ Generando estampita...")
-
-      // Asegurar que el mapa está en posición
+      // Ajustar la vista del mapa
       const bounds = new mapboxgl.LngLatBounds()
       locations.forEach((loc) => bounds.extend(loc.coordinates))
       map.current.fitBounds(bounds, {
@@ -595,136 +533,74 @@ export default function TravelStampGenerator() {
         maxZoom: 15,
       })
 
-      // Esperar a que el mapa se renderice completamente
+      // Esperar a que el mapa se renderice
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      // Determinar dimensiones según formato
-      let width = 1200
-      let height = 900
+      // Obtener el canvas del mapa
+      const mapCanvas = map.current.getCanvas()
+      const width = stampFormat === "portrait" ? 900 : 1200
+      const height = stampFormat === "portrait" ? 1200 : 900
 
-      if (stampFormat === "portrait") {
-        width = 900
-        height = 1200
-      } else if (stampFormat === "square") {
-        width = 1200
-        height = 1200
-      } else if (stampFormat === "story") {
-        width = 1080
-        height = 1920
+      // Crear canvas final
+      const canvas = document.createElement("canvas")
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext("2d")
+      if (!ctx) throw new Error("No se pudo obtener el contexto del canvas")
+
+      // Dibujar el mapa
+      ctx.drawImage(mapCanvas, 0, 0, width, height)
+
+      // Añadir elementos de texto
+      ctx.textAlign = "center"
+      ctx.fillStyle = "white"
+      ctx.shadowColor = "rgba(0, 0, 0, 0.5)"
+      ctx.shadowBlur = 10
+      ctx.shadowOffsetX = 2
+      ctx.shadowOffsetY = 2
+
+      // Título
+      ctx.font = "bold 80px serif"
+      ctx.fillText(tripTitle || "Mi Viaje", width / 2, 120)
+
+      // Fecha
+      ctx.font = "40px serif"
+      ctx.fillText(tripDate || "2025", width / 2, 180)
+
+      // Sección inferior
+      const footerHeight = 200
+      ctx.shadowBlur = 0
+      ctx.fillStyle = "rgba(255, 251, 235, 0.9)"
+      ctx.fillRect(0, height - footerHeight, width, footerHeight)
+
+      // Distancia
+      ctx.fillStyle = "#92400E"
+      ctx.font = "bold 32px sans-serif"
+      ctx.fillText(`${totalDistance} km recorridos`, width / 2, height - footerHeight + 50)
+
+      // Comentario
+      if (tripComment) {
+        ctx.font = "italic 28px serif"
+        ctx.fillStyle = "#78350F"
+        ctx.fillText(`"${tripComment}"`, width / 2, height - footerHeight + 100)
       }
 
-      // Construir la URL de la imagen estática correctamente
-      const staticMapUrl = ""
+      // Footer
+      ctx.font = "16px sans-serif"
+      ctx.fillStyle = "#B45309"
+      ctx.textAlign = "left"
+      ctx.fillText("travelprint.me", 40, height - 30)
+      ctx.textAlign = "right"
+      ctx.fillText("Mi recuerdo de viaje", width - 40, height - 30)
 
-      try {
-        // Método alternativo: usar captura del canvas del mapa
-        const canvas = map.current.getCanvas()
-        const dataUrl = canvas.toDataURL("image/png")
-
-        console.log("✅ Imagen capturada del mapa")
-
-        // Crear un canvas para componer la imagen final
-        const finalCanvas = document.createElement("canvas")
-        const ctx = finalCanvas.getContext("2d")
-
-        if (!ctx) throw new Error("No se pudo obtener el contexto del canvas")
-
-        finalCanvas.width = width
-        finalCanvas.height = height
-
-        // Crear una imagen a partir del mapa capturado
-        const mapImage = new Image()
-        mapImage.crossOrigin = "anonymous"
-
-        await new Promise((resolve, reject) => {
-          mapImage.onload = resolve
-          mapImage.onerror = reject
-          mapImage.src = dataUrl
-        })
-
-        // Dibujar el mapa
-        ctx.drawImage(mapImage, 0, 0, width, height)
-
-        // Añadir elementos de texto
-        ctx.textAlign = "center"
-        ctx.fillStyle = "white"
-        ctx.shadowColor = "rgba(0, 0, 0, 0.5)"
-        ctx.shadowBlur = 10
-        ctx.shadowOffsetX = 2
-        ctx.shadowOffsetY = 2
-
-        // Título
-        ctx.font = "bold 80px serif"
-        ctx.fillText(tripTitle || "Mi Viaje", width / 2, 120)
-
-        // Fecha
-        ctx.font = "40px serif"
-        ctx.fillText(tripDate || "2025", width / 2, 180)
-
-        // Sección inferior
-        const footerHeight = 200
-        ctx.shadowBlur = 0
-        ctx.shadowOffsetX = 0
-        ctx.shadowOffsetY = 0
-
-        ctx.fillStyle = "rgba(255, 251, 235, 0.9)"
-        ctx.fillRect(0, height - footerHeight, width, footerHeight)
-
-        // Distancia
-        ctx.fillStyle = "#92400E"
-        ctx.font = "bold 32px sans-serif"
-        ctx.fillText(`${totalDistance} km recorridos`, width / 2, height - footerHeight + 50)
-
-        // Comentario
-        if (tripComment) {
-          ctx.font = "italic 28px serif"
-          ctx.fillStyle = "#78350F"
-          ctx.fillText(`"${tripComment}"`, width / 2, height - footerHeight + 100)
-        }
-
-        // Footer
-        ctx.font = "16px sans-serif"
-        ctx.fillStyle = "#B45309"
-        ctx.textAlign = "left"
-        ctx.fillText("travelprint.me", 40, height - 30)
-        ctx.textAlign = "right"
-        ctx.fillText("Mi recuerdo de viaje", width - 40, height - 30)
-
-        // Convertir a URL de datos
-        const finalDataUrl = finalCanvas.toDataURL("image/png")
-        console.log("✅ Imagen final generada correctamente")
-
-        // Subir a Cloudinary
-        console.log("☁️ Subiendo a Cloudinary...")
-        const response = await fetch("/api/upload-to-cloudinary", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            imageUrl: finalDataUrl,
-            title: tripTitle || "Mi Viaje",
-          }),
-        })
-
-        if (!response.ok) {
-          throw new Error("Error al subir la imagen a Cloudinary")
-        }
-
-        const { url: cloudinaryUrl } = await response.json()
-        console.log("✅ Imagen subida a Cloudinary")
-
-        setGeneratedMap(cloudinaryUrl || finalDataUrl)
-        setShareUrl(cloudinaryUrl)
-      } catch (error) {
-        console.error("Error al generar URL de mapa estático:", error)
-        setDebugInfo((prev) => prev + "\nError en URL de mapa: " + (error as Error).message)
-        throw new Error("Error al generar la imagen del mapa")
-      }
+      // Convertir a URL de datos
+      const dataUrl = canvas.toDataURL("image/png")
+      setGeneratedMap(dataUrl)
+      setShareUrl(dataUrl)
     } catch (error) {
       console.error("❌ Error al generar la estampita:", error)
       setMapError("Error al generar la estampita. Intenta de nuevo.")
-      setDebugInfo((prev) => prev + "\nError al generar estampita: " + (error as Error).message)
+      setDebugInfo((prev) => prev + "\nError al generar estampita: " + error)
     } finally {
       setIsGenerating(false)
     }
@@ -1072,6 +948,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
