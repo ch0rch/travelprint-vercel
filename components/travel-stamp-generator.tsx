@@ -52,6 +52,7 @@ export default function TravelStampGenerator() {
   const stampRef = useRef<HTMLDivElement>(null)
   const [markerColor, setMarkerColor] = useState("#F97316") // Color naranja para los marcadores
   const [routeColor, setRouteColor] = useState("#F97316") // Color naranja para la ruta
+  const [isMapLoaded, setIsMapLoaded] = useState(false)
 
   // Verificar licencia en la URL
   useEffect(() => {
@@ -74,7 +75,8 @@ export default function TravelStampGenerator() {
         center: mapCenter,
         zoom: zoom,
         attributionControl: false,
-        interactive: true, // Permitir interacción con el mapa
+        preserveDrawingBuffer: true, // Importante para la captura
+        crossSourceCollisions: false,
       })
 
       // Añadir controles de navegación
@@ -82,10 +84,16 @@ export default function TravelStampGenerator() {
 
       // Esperar a que el mapa cargue
       map.current.on("load", () => {
+        setIsMapLoaded(true)
         // Añadir fuente y capa para la ruta si hay ubicaciones
         if (locations.length > 1) {
           updateRoute()
         }
+      })
+
+      // Manejar errores de carga de tiles
+      map.current.on("error", (e) => {
+        console.error("Mapbox error:", e)
       })
     }
 
@@ -103,6 +111,37 @@ export default function TravelStampGenerator() {
       map.current.setStyle(mapStyle)
     }
   }, [mapStyle])
+
+  // Función para obtener una imagen estática del mapa como respaldo
+  const getStaticMapImage = async () => {
+    if (!locations.length || !MAPBOX_TOKEN) return null
+
+    let bounds: mapboxgl.LngLatBounds
+    if (locations.length === 1) {
+      const [lng, lat] = locations[0].coordinates
+      bounds = new mapboxgl.LngLatBounds([lng - 0.1, lat - 0.1], [lng + 0.1, lat + 0.1])
+    } else {
+      bounds = new mapboxgl.LngLatBounds()
+      locations.forEach((loc) => bounds.extend(loc.coordinates))
+    }
+
+    const [west, south, east, north] = bounds.toArray().flat()
+
+    // Construir la URL de la imagen estática
+    const width = 1200
+    const height =
+      stampFormat === "square"
+        ? 1200
+        : stampFormat === "story"
+          ? Math.round((width * 16) / 9)
+          : Math.round((width * 3) / 4)
+
+    const path = locations.map((loc) => loc.coordinates.join(",")).join(";")
+
+    const url = `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/path-3+f97316(${path})/auto/${width}x${height}?padding=50&access_token=${MAPBOX_TOKEN}`
+
+    return url
+  }
 
   // Calcular distancia total usando la fórmula de Haversine
   const calculateHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -289,19 +328,57 @@ export default function TravelStampGenerator() {
         })
       }
 
-      // Esperar a que el mapa se renderice
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Esperar a que el mapa se renderice completamente
+      await new Promise((resolve) => setTimeout(resolve, 2000))
 
-      const canvas = await html2canvas(stampRef.current, {
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: null,
-        scale: 2, // Mayor calidad
-      })
+      // Intentar primero con html2canvas
+      try {
+        const canvas = await html2canvas(stampRef.current, {
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: null,
+          scale: 2,
+          logging: true,
+          onclone: (document) => {
+            // Asegurarse de que las imágenes del mapa sean visibles en el clon
+            const mapImages = document.getElementsByClassName("mapboxgl-canvas")
+            Array.from(mapImages).forEach((img: any) => {
+              if (img) {
+                img.style.visibility = "visible"
+                img.crossOrigin = "anonymous"
+              }
+            })
+          },
+        })
 
-      setGeneratedMap(canvas.toDataURL("image/png"))
+        const imageUrl = canvas.toDataURL("image/png")
+
+        // Verificar si la imagen capturada tiene contenido válido
+        const img = new Image()
+        img.src = imageUrl
+        await new Promise((resolve, reject) => {
+          img.onload = () => {
+            if (img.width > 1 && img.height > 1) {
+              setGeneratedMap(imageUrl)
+              resolve(true)
+            } else {
+              reject(new Error("Invalid image generated"))
+            }
+          }
+          img.onerror = reject
+        })
+      } catch (error) {
+        console.error("Error with html2canvas, falling back to static map:", error)
+        // Fallback: usar imagen estática de Mapbox
+        const staticMapUrl = await getStaticMapImage()
+        if (staticMapUrl) {
+          setGeneratedMap(staticMapUrl)
+        } else {
+          throw new Error("Could not generate map image")
+        }
+      }
     } catch (error) {
-      console.error("Error:", error)
+      console.error("Error generating stamp:", error)
     } finally {
       setIsGenerating(false)
     }
@@ -470,12 +547,17 @@ export default function TravelStampGenerator() {
       <div
         ref={stampRef}
         className={`relative ${getAspectRatioClass()} rounded-3xl overflow-hidden bg-amber-50 mx-auto max-w-2xl shadow-xl`}
+        style={{ minHeight: "400px" }} // Asegurar altura mínima
       >
         {/* Contenedor del mapa */}
-        <div ref={mapContainer} className="absolute inset-0" />
+        <div
+          ref={mapContainer}
+          className="absolute inset-0"
+          style={{ visibility: isMapLoaded ? "visible" : "hidden" }}
+        />
 
         {/* Overlay con título y fecha */}
-        <div className="absolute inset-0 flex flex-col items-center justify-between p-8">
+        <div className="absolute inset-0 flex flex-col items-center justify-between p-8 z-10">
           <div className="text-center">
             <h1
               className="text-4xl md:text-5xl font-serif font-bold mb-2"
@@ -499,7 +581,7 @@ export default function TravelStampGenerator() {
         </div>
 
         {/* Sección inferior con distancia y comentario */}
-        <div className="absolute bottom-0 inset-x-0 bg-[rgba(255,251,235,0.9)] p-6 space-y-4">
+        <div className="absolute bottom-0 inset-x-0 bg-[rgba(255,251,235,0.9)] p-6 space-y-4 z-10">
           <div className="text-center">
             <span className="inline-block px-4 py-1 rounded-full bg-amber-100 text-amber-800 font-medium text-lg">
               {totalDistance} km recorridos
@@ -541,6 +623,8 @@ export default function TravelStampGenerator() {
     </div>
   )
 }
+
+
 
 
 
